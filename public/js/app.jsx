@@ -28,11 +28,22 @@ async function buildPath(from, to) {
     if (!response.ok) throw new Error('OSRM request failed');
     const data = await response.json();
     if (!data.routes || !data.routes[0]) throw new Error('No route found');
-    const coords = data.routes[0].geometry.coordinates;
-    return coords.map(([lng, lat]) => [lat, lng]);
+    const route = data.routes[0];
+    const coords = route.geometry.coordinates;
+    const distanceKm = Math.round(route.distance / 1000 * 10) / 10;
+    const durationMin = Math.round(route.duration / 60);
+    return {
+      pts: coords.map(([lng, lat]) => [lat, lng]),
+      distance: distanceKm,
+      duration: durationMin
+    };
   } catch (err) {
     console.warn('Routing failed, using straight line fallback:', err);
-    return [[from.lat, from.lng], [to.lat, to.lng]];
+    return {
+      pts: [[from.lat, from.lng], [to.lat, to.lng]],
+      distance: null,
+      duration: null
+    };
   }
 }
 
@@ -41,7 +52,7 @@ function formatNum(n) { return n.toLocaleString('fr-CA'); }
 // =============================================================================
 // MAP COMPONENT — wraps Leaflet
 // =============================================================================
-function MapView({ stores, reps, layers, selectedStore, onSelectStore, markerStyle, mapStyle }) {
+function MapView({ stores, reps, layers, selectedStore, onSelectStore, onRouteInfo, markerStyle, mapStyle }) {
   const mapEl = useRef(null);
   const mapRef = useRef(null);
   const layerRefs = useRef({ stores: null, homes: null, route: null });
@@ -185,7 +196,14 @@ function MapView({ stores, reps, layers, selectedStore, onSelectStore, markerSty
 
     const loadRoute = async () => {
       const rep = repById(selectedStore.rep);
-      const pts = await buildPath(rep.home, selectedStore);
+      const route = await buildPath(rep.home, selectedStore);
+      const pts = route.pts;
+
+      // Update route info display
+      onRouteInfo({
+        distance: route.distance,
+        duration: route.duration
+      });
 
       // Halo (white outline)
       L.polyline(pts, {
@@ -300,7 +318,8 @@ function Sidebar({
   layers, setLayers,
   query, setQuery,
   selectedStore, setSelectedStore,
-  filteredStores
+  filteredStores,
+  routeInfo
 }) {
   return (
     <aside className="sidebar">
@@ -393,12 +412,12 @@ function Sidebar({
             <div className="dest">{selectedStore.name}</div>
             <div className="stats">
               <div>
-                <span className="v">{selectedStore.dist}<span style={{ fontSize: 11, color: 'var(--ib-grey-medium)', marginLeft: 4 }}>km</span></span>
+                <span className="v">{routeInfo?.distance !== null ? routeInfo?.distance : selectedStore.dist}<span style={{ fontSize: 11, color: 'var(--ib-grey-medium)', marginLeft: 4 }}>km</span></span>
                 <span className="k">aller simple</span>
               </div>
               <div>
-                <span className="v" style={{ color: 'var(--ib-white)' }}>≈ {Math.round(selectedStore.dist / 80 * 60)}<span style={{ fontSize: 11, color: 'var(--ib-grey-medium)', marginLeft: 4 }}>min</span></span>
-                <span className="k">durée estimée</span>
+                <span className="v" style={{ color: 'var(--ib-white)' }}>{routeInfo?.duration !== null ? routeInfo?.duration : Math.round(selectedStore.dist / 80 * 60)}<span style={{ fontSize: 11, color: 'var(--ib-grey-medium)', marginLeft: 4 }}>min</span></span>
+                <span className="k">durée {routeInfo?.duration !== null ? 'réelle' : 'estimée'}</span>
               </div>
             </div>
           </div>
@@ -440,6 +459,7 @@ function App() {
   const [query, setQuery] = useState('');
   const [activeRep, setActiveRep] = useState(null);
   const [selectedStore, setSelectedStore] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
   const [layers, setLayers] = useState({ stores: true, homes: true, labels: true });
 
   // Filter stores based on search query AND active rep
@@ -474,6 +494,7 @@ function App() {
           selectedStore={selectedStore}
           setSelectedStore={setSelectedStore}
           filteredStores={filteredStores}
+          routeInfo={routeInfo}
         />
         <MapView
           stores={filteredStores}
@@ -481,6 +502,7 @@ function App() {
           layers={layers}
           selectedStore={selectedStore}
           onSelectStore={setSelectedStore}
+          onRouteInfo={setRouteInfo}
           markerStyle={t.markerStyle}
           mapStyle={t.mapStyle}
         />
