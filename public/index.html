@@ -131,8 +131,8 @@
                             <button class="basemap-btn active" data-basemap="positron" title="Positron (Recommandé)">
                                 <i class="fas fa-square-full"></i> Clair
                             </button>
-                            <button class="basemap-btn" data-basemap="voyager" title="Voyager">
-                                <i class="fas fa-square-full"></i> Complet
+                            <button class="basemap-btn" data-basemap="streets" title="Streets">
+                                <i class="fas fa-square-full"></i> Détaillé
                             </button>
                         </div>
                     </div>
@@ -147,21 +147,27 @@
                     <!-- Legend -->
                     <div class="legend">
                         <h4><i class="fas fa-book"></i> Légende</h4>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #0066cc;"></span>
-                            <span>Magasins Canac</span>
+                        <div class="legend-section">
+                            <p class="legend-title"><i class="fas fa-store"></i> <strong>Magasins</strong></p>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #0066cc; border-radius: 50%; width: 12px; height: 12px;"></span>
+                                <span>Points de vente Canac</span>
+                            </div>
                         </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #2c5f2d;"></span>
-                            <span>Zone Rep 1</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #c85a3a;"></span>
-                            <span>Zone Rep 2</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color" style="background: #6b4c89;"></span>
-                            <span>Zone Rep 3</span>
+                        <div class="legend-section" style="margin-top: 10px;">
+                            <p class="legend-title"><i class="fas fa-draw-polygon"></i> <strong>Zones territoriales</strong></p>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #2c5f2d;"></span>
+                                <span>Zone Rep 1 (Vert)</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #c85a3a;"></span>
+                                <span>Zone Rep 2 (Orange)</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #6b4c89;"></span>
+                                <span>Zone Rep 3 (Violet)</span>
+                            </div>
                         </div>
                     </div>
                 </div>

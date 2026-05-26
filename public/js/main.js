@@ -17,10 +17,10 @@ const BASEMAPS = {
     maxZoom: 19,
     id: 'positron'
   }),
-  voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastered/{z}/{x}/{y}{r}.png', {
+  streets: L.tileLayer('https://{s}.basemaps.cartocdn.com/full_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap, © CartoDB',
     maxZoom: 19,
-    id: 'voyager'
+    id: 'streets'
   })
 };
 
@@ -91,6 +91,8 @@ function initMap() {
 
   loadData();
   loadRepLocations();
+  updateRepLocationDisplay();
+  console.log(`✅ Carte initialisée - ${currentRep} villes trouvées`);
 }
 
 // ===== DESSINER/ÉDITER POLYGONE =====
@@ -128,22 +130,63 @@ function editZone(zoneId) {
   currentPolygon = [...zone.coordinates];
   editingPolygonMarkers = [];
 
-  // Show existing points
-  currentPolygon.forEach(([lat, lon]) => {
+  // Show existing points avec numéros et possibilité de suppression
+  currentPolygon.forEach((coords, index) => {
+    const [lat, lon] = coords;
     const marker = L.circleMarker([lat, lon], {
-      radius: 5,
+      radius: 8,
       fillColor: zone.color,
-      color: zone.color,
+      color: '#fff',
       weight: 2,
-      opacity: 0.8,
-      fillOpacity: 0.8
-    }).addTo(map);
+      opacity: 1,
+      fillOpacity: 0.8,
+      className: 'editable-point'
+    });
+
+    marker.bindPopup(`
+      <small>Point ${index + 1}</small><br>
+      <button onclick="removePointFromZone(${index})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
+    `);
+
+    marker.addTo(map);
     editingPolygonMarkers.push(marker);
   });
 
   document.getElementById('draw-polygon').style.background = '#c85a3a';
   document.getElementById('draw-polygon').textContent = '✏️ Mode édition (Esc pour finir)';
-  alert(`Édition de la zone Rep ${zone.rep}\nCliquez pour ajouter des points\nAppuyez sur Échap pour terminer`);
+  alert(`Édition de la zone Rep ${zone.rep}\nCliquez sur la carte pour ajouter des points\nCliquez sur un point existant pour le supprimer\nAppuyez sur Échap pour terminer`);
+}
+
+function removePointFromZone(index) {
+  if (currentPolygon.length <= 3) {
+    alert('Une zone doit avoir au moins 3 points');
+    return;
+  }
+  currentPolygon.splice(index, 1);
+
+  // Redessiner les marqueurs
+  editingPolygonMarkers.forEach(marker => map.removeLayer(marker));
+  editingPolygonMarkers = [];
+
+  currentPolygon.forEach((coords, idx) => {
+    const [lat, lon] = coords;
+    const marker = L.circleMarker([lat, lon], {
+      radius: 8,
+      fillColor: REP_COLORS[currentRep],
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    });
+    marker.bindPopup(`
+      <small>Point ${idx + 1}</small><br>
+      <button onclick="removePointFromZone(${idx})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
+    `);
+    marker.addTo(map);
+    editingPolygonMarkers.push(marker);
+  });
+
+  console.log(`✅ Point ${index + 1} supprimé`);
 }
 
 function onMapClick(e) {
@@ -242,6 +285,8 @@ function displayMarkers(type) {
   const data = canac;
   const color = CLIENT_COLOR;
 
+  console.log(`📍 Affichage de ${data.length} magasins Canac`);
+
   data.forEach(item => {
     // Ajouter la ville à la liste pour la recherche
     if (item.city) {
@@ -282,7 +327,7 @@ function displayZone(zoneId, zone) {
     fillOpacity: 0.2
   });
 
-  const popupContent = `<strong>Zone - Rep ${zone.rep}</strong><br><button onclick="editZone('${zoneId}')" style="margin-top:8px; padding:5px 10px; cursor:pointer; background: ${zone.color}; color: white; border: none; border-radius: 4px;">✏️ Éditer</button>`;
+  const popupContent = `<strong>Zone - Rep ${zone.rep}</strong><br><button onclick="editZone('${zoneId}')" style="margin-top:8px; margin-right:5px; padding:5px 10px; cursor:pointer; background: ${zone.color}; color: white; border: none; border-radius: 4px; font-size: 12px;">✏️ Éditer</button><button onclick="deleteZoneById('${zoneId}')" style="margin-top:8px; padding:5px 10px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 12px;">🗑️ Supprimer</button>`;
   polygon.bindPopup(popupContent);
   polygon.on('click', function(e) {
     if (currentRep === zone.rep) {
@@ -293,6 +338,16 @@ function displayZone(zoneId, zone) {
   map.addLayer(polygon);
   layers.zones.push(polygon);
   drawnPolygons.push(polygon);
+}
+
+function deleteZoneById(zoneId) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cette zone ?')) {
+    deleteZone(zoneId);
+    drawnPolygons = [];
+    layers.zones.forEach(poly => map.removeLayer(poly));
+    layers.zones = [];
+    Object.keys(zones).forEach(id => displayZone(id, zones[id]));
+  }
 }
 
 // ===== ITINÉRAIRES =====
@@ -405,6 +460,7 @@ function filterCitiesByQuery(query) {
 
 function updateSearchResults(query) {
   const results = filterCitiesByQuery(query);
+  console.log(`🔍 Recherche "${query}" → ${results.length} résultats`);
   searchResultsList.innerHTML = '';
 
   results.forEach(city => {
@@ -414,21 +470,34 @@ function updateSearchResults(query) {
       zoomToCity(city);
       citySearchInput.value = '';
       searchResultsList.innerHTML = '';
+      console.log(`✅ Zoom vers ${city}`);
     });
     searchResultsList.appendChild(li);
   });
 }
 
 function zoomToCity(city) {
-  const cityMarkers = layers.canac.filter(marker => {
-    const popupContent = marker.getPopup().getContent();
-    return popupContent.includes(`<br>${city}<br>`);
+  // Trouver tous les magasins de la ville
+  const cityClients = canac.filter(client => client.city === city);
+
+  if (cityClients.length === 0) {
+    console.log(`❌ Aucun magasin trouvé pour ${city}`);
+    return;
+  }
+
+  // Créer un groupe de tous les marqueurs de la ville
+  const markers = [];
+  canac.forEach(client => {
+    if (client.city === city) {
+      const marker = L.latLng(client.lat, client.lon);
+      markers.push(marker);
+    }
   });
 
-  if (cityMarkers.length > 0) {
-    // Calculer les limites de tous les marqueurs de la ville
-    const group = new L.featureGroup(cityMarkers);
-    map.fitBounds(group.getBounds(), { padding: [50, 50] });
+  if (markers.length > 0) {
+    const bounds = L.latLngBounds(markers);
+    map.fitBounds(bounds, { padding: [50, 50] });
+    console.log(`✅ ${markers.length} magasin(s) trouvé(s) à ${city}`);
   }
 }
 

@@ -511,11 +511,35 @@ main {
   color: var(--primary);
 }
 
+.legend-section {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.legend-section:last-child {
+  border-bottom: none;
+}
+
+.legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.legend-title i {
+  color: var(--primary);
+  margin-right: 4px;
+}
+
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   gap: 10px;
+  font-size: 12px;
 }
 
 .legend-color {
