@@ -245,6 +245,9 @@ app.post('/api/route', async (req, res) => {
           if (route.overview_polyline?.points) {
             polyline = decodePolyline(route.overview_polyline.points)
               .map(p => ({ lat: p[0], lng: p[1] }));
+            console.log('✓ Woosmap polyline decoded:', polyline.length, 'points');
+          } else {
+            console.log('⚠ Woosmap no overview_polyline, using approximation');
           }
 
           // Fallback to curved approximation if no polyline
