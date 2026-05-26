@@ -1,0 +1,11 @@
+id,name,address,city,postal_code,phone,email,website,type,status,established,manager,employees,annual_revenue,lat,lon
+1,Canac Cookshire,123 Rue Principale,Cookshire,J0B 1M0,819-875-3111,contact@canac.qc.ca,www.canac.qc.ca,retail,active,2010,Jean Dupont,15,2500000,45.467,-72.057
+2,Canac Sherbrooke,456 Boulevard de la Cité,Sherbrooke,J1H 1Z3,819-821-5555,sherbrooke@canac.qc.ca,www.canac.qc.ca,retail,active,2005,Marc Gagnon,25,4000000,45.4012,-71.8929
+3,Canac Drummondville,789 Rue Commercial,Drummondville,J2B 2Z9,819-477-4444,drummondville@canac.qc.ca,www.canac.qc.ca,retail,active,2008,Pierre Leblanc,18,3200000,45.8839,-72.4385
+4,Canac Quebec,1000 Boulevard Charest,Quebec,G1R 4P5,418-523-8888,quebec@canac.qc.ca,www.canac.qc.ca,retail,active,2000,André Moreau,35,6000000,46.8139,-71.2080
+5,Canac Chicoutimi,2000 Rue St-Paul,Chicoutimi,G7H 1Y8,418-543-6666,chicoutimi@canac.qc.ca,www.canac.qc.ca,retail,active,2003,Sophie Tremblay,20,3500000,48.3894,-71.2036
+6,Canac Trois-Rivières,3000 Rue Maurice,Trois-Rivières,G8Z 1Z6,819-375-2222,tr@canac.qc.ca,www.canac.qc.ca,retail,active,2007,Yves Beaulieu,16,2800000,46.3438,-72.5506
+7,Canac Montréal Nord,4000 Boulevard Crémazie,Montreal,H1G 3G5,514-324-1111,mtl@canac.qc.ca,www.canac.qc.ca,retail,active,1995,François Roy,40,7000000,45.5158,-73.6236
+8,Canac Gatineau,5000 Boulevard de la Gappe,Gatineau,J8T 8M7,819-246-3333,gatineau@canac.qc.ca,www.canac.qc.ca,retail,active,2009,Luc Savard,14,2200000,45.4215,-75.6972
+9,Canac Levis,6000 Rue St-Louis,Levis,G6V 3Z4,418-837-4444,levis@canac.qc.ca,www.canac.qc.ca,retail,active,2006,Nathalie Cloutier,17,2900000,46.5748,-71.1850
+10,Canac Laval,7000 Boulevard des Laurentides,Laval,H7G 2T3,450-622-5555,laval@canac.qc.ca,www.canac.qc.ca,retail,active,2004,Marie Desrosiers,28,4500000,45.5697,-73.7438
