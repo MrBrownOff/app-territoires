@@ -3,7 +3,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
-const { createClient } = require('@supabase/supabase-js');
 const parseKml = require('./kml-parser');
 const axios = require('axios');
 
@@ -28,19 +27,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Supabase (optionnel)
+// Supabase (optionnel - désactivé pour Railway)
 let supabase = null;
-if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY &&
-    process.env.SUPABASE_URL !== 'https://dummy.supabase.co' &&
-    process.env.SUPABASE_KEY !== 'dummy-key') {
-  supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-  );
-  console.log('✅ Supabase initialisé');
-} else {
-  console.log('⚠️ Supabase désactivé (clés dummy détectées)');
-}
+// Supabase est désactivé car nous n'utilisons que localStorage pour persister les zones
 
 // ===== ROUTES =====
 
