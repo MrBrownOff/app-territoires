@@ -20,25 +20,20 @@ const STORES = window.IB_DATA.stores;
 
 function repById(id) { return REPS.find(r => r.id === id); }
 
-// Build a simple "road-ish" path between two points: not a straight line,
-// not actual routing — just a few intermediate jitter points to look like roads.
-function buildPath(from, to) {
-  const dLat = to.lat - from.lat;
-  const dLng = to.lng - from.lng;
-  const steps = 6;
-  const pts = [[from.lat, from.lng]];
-  let prevJitterLat = 0, prevJitterLng = 0;
-  for (let i = 1; i < steps; i++) {
-    const t = i / steps;
-    // alternate jitter direction so it looks like turns
-    const j = (i % 2 === 0) ? 1 : -1;
-    const jitter = 0.12 * Math.sin(t * Math.PI);
-    prevJitterLat = j * jitter * (dLng) * 0.18;
-    prevJitterLng = -j * jitter * (dLat) * 0.18;
-    pts.push([from.lat + dLat * t + prevJitterLat, from.lng + dLng * t + prevJitterLng]);
+// Fetch real routing from OSRM (Open Source Routing Machine)
+async function buildPath(from, to) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?geometries=geojson`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('OSRM request failed');
+    const data = await response.json();
+    if (!data.routes || !data.routes[0]) throw new Error('No route found');
+    const coords = data.routes[0].geometry.coordinates;
+    return coords.map(([lng, lat]) => [lat, lng]);
+  } catch (err) {
+    console.warn('Routing failed, using straight line fallback:', err);
+    return [[from.lat, from.lng], [to.lat, to.lng]];
   }
-  pts.push([to.lat, to.lng]);
-  return pts;
 }
 
 function formatNum(n) { return n.toLocaleString('fr-CA'); }
@@ -188,35 +183,37 @@ function MapView({ stores, reps, layers, selectedStore, onSelectStore, markerSty
     layerRefs.current.route.clearLayers();
     if (!selectedStore) return;
 
-    const rep = repById(selectedStore.rep);
-    const pts = buildPath(rep.home, selectedStore);
+    const loadRoute = async () => {
+      const rep = repById(selectedStore.rep);
+      const pts = await buildPath(rep.home, selectedStore);
 
-    // Halo (white outline)
-    L.polyline(pts, {
-      color: '#FFFFFF',
-      weight: 7,
-      opacity: 0.9,
-      lineCap: 'round'
-    }).addTo(layerRefs.current.route);
+      // Halo (white outline)
+      L.polyline(pts, {
+        color: '#FFFFFF',
+        weight: 7,
+        opacity: 0.9,
+        lineCap: 'round'
+      }).addTo(layerRefs.current.route);
 
-    // Main animated dashed line in rep color
-    const main = L.polyline(pts, {
-      color: rep.color,
-      weight: 3,
-      opacity: 1,
-      lineCap: 'round',
-      dashArray: '8 4',
-      className: 'ib-route'
-    }).addTo(layerRefs.current.route);
+      // Main animated dashed line in rep color
+      const main = L.polyline(pts, {
+        color: rep.color,
+        weight: 3,
+        opacity: 1,
+        lineCap: 'round',
+        dashArray: '8 4',
+        className: 'ib-route'
+      }).addTo(layerRefs.current.route);
 
-    // Animate draw by gradually setting opacity. Already a dashed marching ant.
+      // Fit bounds gently
+      const map = mapRef.current;
+      if (map) {
+        const bounds = L.latLngBounds(pts);
+        map.flyToBounds(bounds, { padding: [80, 80], duration: 0.8, maxZoom: 11 });
+      }
+    };
 
-    // Fit bounds gently
-    const map = mapRef.current;
-    if (map) {
-      const bounds = L.latLngBounds(pts);
-      map.flyToBounds(bounds, { padding: [80, 80], duration: 0.8, maxZoom: 11 });
-    }
+    loadRoute();
   }, [selectedStore]);
 
   // Resize on layout change
