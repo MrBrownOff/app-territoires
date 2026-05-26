@@ -240,6 +240,13 @@ app.post('/api/route', async (req, res) => {
           const distance = route.distance.value / 1000; // convert m to km
           const duration = route.duration.value / 60; // convert s to minutes
 
+          // Debug: log what we get from Woosmap
+          console.log('Woosmap response keys:', Object.keys(route));
+          console.log('Has overview_polyline?', !!route.overview_polyline);
+          if (route.overview_polyline) {
+            console.log('overview_polyline keys:', Object.keys(route.overview_polyline));
+          }
+
           // Decode polyline from overview_polyline
           let polyline = [];
           if (route.overview_polyline?.points) {
