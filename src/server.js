@@ -68,19 +68,21 @@ app.get('/api/clients', async (req, res) => {
       .filter(line => line.trim())
       .map(line => {
         const parts = parseCSVLine(line);
-        const lat = parseFloat(parts[14]);
-        const lon = parseFloat(parts[15]);
-        
+        const lat = parseFloat(parts[5]);
+        const lon = parseFloat(parts[6]);
+
         // Vérifier que lat/lon sont valides
         if (isNaN(lat) || isNaN(lon)) {
-          console.warn('Coordonnées invalides:', parts[1], parts[14], parts[15]);
+          console.warn('Coordonnées invalides:', parts[1], parts[5], parts[6]);
           return null;
         }
 
         return {
           id: parts[0]?.trim(),
           name: parts[1]?.trim(),
+          frequency: parts[2]?.trim(),
           city: parts[3]?.trim(),
+          region: parts[4]?.trim(),
           lat: lat,
           lon: lon,
           type: 'canac',

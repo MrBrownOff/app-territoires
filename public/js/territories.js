@@ -1,0 +1,189 @@
+// ===== TERRITORIES MANAGEMENT =====
+// Hypothèse 1: Répartition géographique (Est-Ouest)
+
+const TERRITORIES_STORAGE_KEY = 'interbois_territories';
+
+// Zone A (Rep 1 - Ouest) : Montérégie, Laval, Lanaudières
+// Zone B (Rep 2 - Est) : Reste des régions
+const ZONE_A_REGIONS = ['Montérégie', 'Laval', 'Lanaudières'];
+const ZONE_B_REGIONS = [
+  'Capitale-Nationale', 'Chaudière-Appalaches', 'Estrie',
+  'Mauricie', 'Saguenay-Lac-St-Jean', 'Bas St-Laurent', 'Centre-du-Québec'
+];
+
+// Fréquences de visite par magasin (calculées manuellement d'après les données)
+const VISIT_FREQUENCIES = {
+  // Format: storeId: { frequency: "monthly" | "6-8weeks", estimatedVisitsPerYear: number }
+  54: { frequency: 'monthly', visitsPerYear: 12 },      // Beauport - monthly
+  61: { frequency: 'monthly', visitsPerYear: 12 },      // Cap-de-la-Madelaine - monthly
+  45: { frequency: 'monthly', visitsPerYear: 12 },      // L'Ancienne-Lorette - monthly
+  230: { frequency: 'monthly', visitsPerYear: 12 },     // Laval - monthly
+  231: { frequency: 'monthly', visitsPerYear: 12 },     // Magog - monthly
+  20: { frequency: 'monthly', visitsPerYear: 12 },      // Notre-Dame-des-Prairies - monthly
+  63: { frequency: 'monthly', visitsPerYear: 12 },      // Rock-Forest - monthly
+  60: { frequency: 'monthly', visitsPerYear: 12 },      // Sherbrooke - monthly
+  59: { frequency: 'monthly', visitsPerYear: 12 },      // Trois-Rivières - monthly
+};
+
+// Magasins listés explicitement pour Zone A
+const ZONE_A_STORES = [230, 14, 68, 75, 76, 69, 70, 73, 74, 20];
+
+function loadTerritoriesFromStorage() {
+  const stored = localStorage.getItem(TERRITORIES_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : null;
+}
+
+function saveTerritoriesInStorage(territories) {
+  localStorage.setItem(TERRITORIES_STORAGE_KEY, JSON.stringify(territories));
+}
+
+function assignStoreToTerritory(store) {
+  // Check if manually assigned
+  if (ZONE_A_STORES.includes(store.id)) {
+    return 1;  // Zone A = Rep 1
+  }
+
+  // Otherwise assign by region
+  if (ZONE_A_REGIONS.includes(store.region)) {
+    return 1;
+  }
+  if (ZONE_B_REGIONS.includes(store.region)) {
+    return 2;
+  }
+
+  // Default to Rep 2 if region not found
+  return 2;
+}
+
+function initializeTerritoriesHypothesis1(canac) {
+  const territories = {
+    1: {  // Rep 1 (Ouest - Bleu)
+      rep: 1,
+      name: 'Rep 1 - Montérégie & Laval',
+      stores: [],
+      color: '#2c5f2d'
+    },
+    2: {  // Rep 2 (Est - Rouge)
+      rep: 2,
+      name: 'Rep 2 - Est-du-Québec',
+      stores: [],
+      color: '#c85a3a'
+    }
+  };
+
+  // Assign each store to a territory
+  canac.forEach(store => {
+    const rep = assignStoreToTerritory(store);
+    territories[rep].stores.push({
+      id: store.id,
+      name: store.name,
+      lat: store.lat,
+      lon: store.lon,
+      region: store.region,
+      frequency: store.frequency || 'unknown'
+    });
+  });
+
+  saveTerritoriesInStorage(territories);
+  return territories;
+}
+
+function calculateTerritoryStats(territory) {
+  const stores = territory.stores || [];
+  const totalStores = stores.length;
+
+  // Calculate visits per year
+  let totalVisitsPerYear = 0;
+  let monthlyVisits = 0;
+  let sixWeekVisits = 0;
+
+  stores.forEach(store => {
+    if (VISIT_FREQUENCIES[store.id]) {
+      totalVisitsPerYear += VISIT_FREQUENCIES[store.id].visitsPerYear;
+      if (VISIT_FREQUENCIES[store.id].frequency === 'monthly') {
+        monthlyVisits++;
+      } else {
+        sixWeekVisits++;
+      }
+    } else {
+      // Default: 6-8 weeks
+      totalVisitsPerYear += 7;
+      sixWeekVisits++;
+    }
+  });
+
+  // Calculate total distance (simplified)
+  let totalDistance = 0;
+  if (stores.length > 1) {
+    for (let i = 0; i < stores.length - 1; i++) {
+      const d = haversineDistance(
+        stores[i].lat, stores[i].lon,
+        stores[i + 1].lat, stores[i + 1].lon
+      );
+      totalDistance += d;
+    }
+  }
+
+  return {
+    totalStores,
+    monthlyVisits,
+    sixWeekVisits,
+    totalVisitsPerYear: Math.round(totalVisitsPerYear),
+    totalDistance: Math.round(totalDistance),
+    avgVisitsPerMonth: (totalVisitsPerYear / 12).toFixed(1)
+  };
+}
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function displayTerritoriesStats(territories) {
+  const statsDiv = document.getElementById('territories-stats');
+  if (!statsDiv) return;
+
+  let html = '<div class="stats-container">';
+
+  Object.values(territories).forEach(territory => {
+    const stats = calculateTerritoryStats(territory);
+    html += `
+      <div class="territory-stat" style="border-left: 4px solid ${territory.color}">
+        <div class="stat-title">${territory.name}</div>
+        <div class="stat-row">
+          <span class="stat-label">Magasins:</span>
+          <span class="stat-value">${stats.totalStores}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Visites mensuelles:</span>
+          <span class="stat-value">${stats.monthlyVisits}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Visites 6-8 sem:</span>
+          <span class="stat-value">${stats.sixWeekVisits}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total/an:</span>
+          <span class="stat-value">${stats.totalVisitsPerYear}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Moy/mois:</span>
+          <span class="stat-value">${stats.avgVisitsPerMonth}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Distance tot:</span>
+          <span class="stat-value">${stats.totalDistance} km</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  statsDiv.innerHTML = html;
+}

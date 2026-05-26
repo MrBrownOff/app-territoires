@@ -572,3 +572,49 @@ main {
     flex-direction: row;
   }
 }
+
+/* ===== TERRITORIES PANEL ===== */
+.territories-stats {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.territory-stat {
+  background: var(--white);
+  border-radius: 6px;
+  padding: 10px;
+  border-left: 4px solid var(--primary);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+.stat-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 3px 0;
+  font-size: 11px;
+}
+
+.stat-label {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: var(--primary);
+}

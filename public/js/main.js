@@ -59,6 +59,7 @@ let map;
 let currentRep = 1;
 let canac = [];  // Seulement Canac
 let zones = {};
+let territories = null;
 let isDrawing = false;
 let currentPolygon = [];
 let drawnPolygons = [];
@@ -284,10 +285,20 @@ async function loadData() {
     // Charger magasins Canac APRÈS (ils seront au-dessus des zones)
     const canacResponse = await fetch(`${API_BASE}/api/clients`);
     canac = await canacResponse.json();
+
+    // Charger les territoires si elles existent
+    territories = loadTerritoriesFromStorage();
+    if (territories) {
+      displayTerritoriesStats(territories);
+    }
+
     displayMarkers('canac');
 
     console.log(`✅ Chargé: ${Object.keys(zones).length} zones depuis localStorage`);
     console.log(`✅ Chargé: ${canac.length} magasins Canac`);
+    if (territories) {
+      console.log(`✅ Chargé: territoires depuis localStorage`);
+    }
   } catch (error) {
     console.error('Erreur chargement données:', error);
     alert('Erreur: Impossible charger les données. Vérifiez la connexion serveur.');
@@ -296,15 +307,31 @@ async function loadData() {
 
 // ===== AFFICHAGE MARQUEURS =====
 function displayMarkers(type) {
-  const data = canac;
-  const color = CLIENT_COLOR;
+  // Clear existing markers
+  layers.canac.forEach(marker => map.removeLayer(marker));
+  layers.canac = [];
 
+  const data = canac;
   console.log(`📍 Affichage de ${data.length} magasins Canac`);
 
   data.forEach(item => {
     // Ajouter la ville à la liste pour la recherche
     if (item.city) {
       uniqueCities.add(item.city);
+    }
+
+    // Déterminer la couleur en fonction des territoires
+    let color = CLIENT_COLOR;
+    let territoryInfo = '';
+    if (territories) {
+      for (let rep in territories) {
+        const found = territories[rep].stores.find(s => s.id === item.id);
+        if (found) {
+          color = territories[rep].color;
+          territoryInfo = `<br><strong>${territories[rep].name}</strong>`;
+          break;
+        }
+      }
     }
 
     const marker = L.circleMarker([item.lat, item.lon], {
@@ -318,7 +345,8 @@ function displayMarkers(type) {
 
     marker.bindPopup(`
       <strong>${item.name}</strong><br>
-      ${item.city}<br>
+      ${item.city}${territoryInfo}<br>
+      Fréquence: ${item.frequency || 'Non définie'}<br>
       <button onclick="calculateRoute(${item.lat}, ${item.lon}, '${item.name}')" style="margin-top:5px; padding:5px 10px; cursor:pointer;">📍 Itinéraire</button>
     `);
 
@@ -597,6 +625,18 @@ document.querySelectorAll('.rep-btn').forEach(btn => {
     updateRepLocationDisplay();
     console.log(`Rep sélectionné: ${currentRep}`);
   });
+});
+
+document.getElementById('init-territories').addEventListener('click', () => {
+  if (!canac || canac.length === 0) {
+    alert('Erreur: Aucun magasin chargé');
+    return;
+  }
+  territories = initializeTerritoriesHypothesis1(canac);
+  displayTerritoriesStats(territories);
+  displayMarkers('canac');
+  console.log('✅ Territoires initialisés:', territories);
+  alert('✅ Territoires initialisés avec succès!');
 });
 
 document.getElementById('draw-polygon').addEventListener('click', toggleDrawing);
