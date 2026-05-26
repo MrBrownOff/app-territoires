@@ -143,9 +143,10 @@ function editZone(zoneId) {
       className: 'editable-point'
     });
 
+    const pointIndex = index; // Capture l'index correctement
     marker.bindPopup(`
-      <small>Point ${index + 1}</small><br>
-      <button onclick="removePointFromZone(${index})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
+      <small>Point ${pointIndex + 1}</small><br>
+      <button onclick="window.removePointFromZone(${pointIndex})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
     `);
 
     marker.addTo(map);
@@ -157,12 +158,17 @@ function editZone(zoneId) {
   alert(`Édition de la zone Rep ${zone.rep}\nCliquez sur la carte pour ajouter des points\nCliquez sur un point existant pour le supprimer\nAppuyez sur Échap pour terminer`);
 }
 
-function removePointFromZone(index) {
+window.removePointFromZone = function(index) {
   if (currentPolygon.length <= 3) {
     alert('Une zone doit avoir au moins 3 points');
     return;
   }
+
+  console.log(`🗑️ Suppression du point ${index + 1} (${currentPolygon.length} → ${currentPolygon.length - 1})`);
   currentPolygon.splice(index, 1);
+
+  // Fermer tous les popups
+  map.closePopup();
 
   // Redessiner les marqueurs
   editingPolygonMarkers.forEach(marker => map.removeLayer(marker));
@@ -180,13 +186,13 @@ function removePointFromZone(index) {
     });
     marker.bindPopup(`
       <small>Point ${idx + 1}</small><br>
-      <button onclick="removePointFromZone(${idx})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
+      <button onclick="window.removePointFromZone(${idx})" style="margin-top:5px; padding:3px 8px; cursor:pointer; background: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 11px;">Supprimer</button>
     `);
     marker.addTo(map);
     editingPolygonMarkers.push(marker);
   });
 
-  console.log(`✅ Point ${index + 1} supprimé`);
+  console.log(`✅ Point ${index + 1} supprimé (${currentPolygon.length} points restants)`);
 }
 
 function onMapClick(e) {
@@ -261,19 +267,19 @@ function finishPolygon() {
 // ===== CHARGEMENT DONNÉES =====
 async function loadData() {
   try {
-    // Charger magasins Canac
-    const canacResponse = await fetch(`${API_BASE}/api/clients`);
-    canac = await canacResponse.json();
-    displayMarkers('canac');
-
-    // Charger zones depuis localStorage (pas de serveur)
+    // Charger zones depuis localStorage d'abord (elles seront en arrière-plan)
     zones = loadZonesFromStorage();
     Object.keys(zones).forEach(zoneId => {
       displayZone(zoneId, zones[zoneId]);
     });
 
-    console.log(`✅ Chargé: ${canac.length} magasins Canac`);
+    // Charger magasins Canac APRÈS (ils seront au-dessus des zones)
+    const canacResponse = await fetch(`${API_BASE}/api/clients`);
+    canac = await canacResponse.json();
+    displayMarkers('canac');
+
     console.log(`✅ Chargé: ${Object.keys(zones).length} zones depuis localStorage`);
+    console.log(`✅ Chargé: ${canac.length} magasins Canac`);
   } catch (error) {
     console.error('Erreur chargement données:', error);
     alert('Erreur: Impossible charger les données. Vérifiez la connexion serveur.');
@@ -355,8 +361,12 @@ async function calculateRoute(lat, lon, name) {
   const routeInfo = document.getElementById('route-info');
   const origin = repLocations[currentRep];
 
+  console.log(`🛣️ Calcul itinéraire pour ${name}`);
+  console.log(`📍 Origine: ${origin.address || 'Non défini'} (${origin.lat}, ${origin.lon})`);
+  console.log(`📍 Destination: ${name} (${lat}, ${lon})`);
+
   if (!origin.lat || !origin.lon) {
-    routeInfo.innerHTML = '⚠️ Veuillez d\'abord définir le domicile du représentant';
+    routeInfo.innerHTML = '⚠️ Veuillez d\'abord définir le domicile du représentant (panel "Domicile Rep")';
     routeInfo.classList.add('active');
     return;
   }
@@ -365,31 +375,45 @@ async function calculateRoute(lat, lon, name) {
   routeInfo.classList.add('active');
 
   try {
+    const requestBody = {
+      origin: { lat: origin.lat, lon: origin.lon },
+      destination: { lat, lon }
+    };
+
+    console.log('📤 Requête:', requestBody);
+
     const response = await fetch(`${API_BASE}/api/route`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        origin,
-        destination: { lat, lon }
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    console.log(`📥 Réponse status: ${response.status}`);
     const route = await response.json();
+    console.log('📥 Réponse body:', route);
 
     if (route.error) {
-      routeInfo.innerHTML = '❌ Erreur calcul itinéraire';
+      routeInfo.innerHTML = `❌ Erreur: ${route.error}`;
+      console.error('Erreur API:', route.error);
+      return;
+    }
+
+    if (!route.distance || !route.duration) {
+      routeInfo.innerHTML = '❌ Données d\'itinéraire invalides';
       return;
     }
 
     routeInfo.innerHTML = `
       <strong>${name}</strong><br>
       📏 Distance: <strong>${route.distance} km</strong><br>
-      ⏱️ Durée: <strong>${route.duration} min</strong>
+      ⏱️ Durée: <strong>${route.duration} min</strong><br>
+      <small style="color: var(--text-light);">Depuis: ${origin.address}</small>
     `;
+    console.log(`✅ Itinéraire calculé: ${route.distance} km, ${route.duration} min`);
 
   } catch (error) {
     console.error('Erreur itinéraire:', error);
-    routeInfo.innerHTML = '❌ Erreur: ' + error.message;
+    routeInfo.innerHTML = `❌ Erreur: ${error.message}`;
   }
 }
 
