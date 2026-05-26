@@ -21,11 +21,6 @@ const BASEMAPS = {
     attribution: '© OpenStreetMap, © CartoDB',
     maxZoom: 19,
     id: 'voyager'
-  }),
-  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap, © CartoDB',
-    maxZoom: 19,
-    id: 'dark'
   })
 };
 
@@ -37,6 +32,18 @@ function loadZonesFromStorage() {
 
 function saveZonesToStorage(zonesObj) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(zonesObj));
+}
+
+function loadRepLocations() {
+  const stored = localStorage.getItem(REP_LOCATIONS_KEY);
+  if (stored) {
+    repLocations = JSON.parse(stored);
+  }
+}
+
+function saveRepLocations() {
+  localStorage.setItem(REP_LOCATIONS_KEY, JSON.stringify(repLocations));
+  updateRepLocationDisplay();
 }
 
 // ===== STATE =====
@@ -56,6 +63,18 @@ let layers = {
 let currentBasemap = 'positron';
 let uniqueCities = new Set();
 
+// Rep locations storage
+const REP_LOCATIONS_KEY = 'interbois_rep_locations';
+let repLocations = {
+  1: { lat: 45.467, lon: -72.057, address: 'Cookshire' },
+  2: { lat: 46.8139, lon: -71.2080, address: 'Quebec' },
+  3: { lat: 48.3894, lon: -71.2036, address: 'Chicoutimi' }
+};
+
+// Zone editing
+let editingZoneId = null;
+let editingPolygonMarkers = [];
+
 // ===== INITIALISATION CARTE =====
 function initMap() {
   map = L.map('map', {
@@ -71,21 +90,60 @@ function initMap() {
   map.on('click', onMapClick);
 
   loadData();
+  loadRepLocations();
 }
 
-// ===== DESSINER POLYGONE (SIMPLE) =====
+// ===== DESSINER/ÉDITER POLYGONE =====
 function toggleDrawing() {
-  isDrawing = !isDrawing;
-  currentPolygon = [];
-  
-  if (isDrawing) {
-    document.getElementById('draw-polygon').style.background = '#ffaa00';
-    document.getElementById('draw-polygon').textContent = '✏️ Mode dessin (Esc pour finir)';
-    alert(`Mode dessin activé pour Rep ${currentRep}\nCliquez sur la carte pour ajouter des points\nAppuyez sur Échap pour terminer`);
-  } else {
-    document.getElementById('draw-polygon').style.background = '#667eea';
-    document.getElementById('draw-polygon').textContent = '✏️ Dessiner Zone';
+  // Check if there are existing zones for this rep
+  const repZones = Object.values(zones).filter(z => z.rep === currentRep);
+
+  if (repZones.length > 0 && !isDrawing) {
+    // Show options to create new or edit existing
+    const zonesList = repZones.map((z, i) => `${i + 1}. Zone ${z.id.substring(0, 8)}`).join('\n');
+    const choice = prompt(
+      `Zones existantes pour Rep ${currentRep}:\n${zonesList}\n\nAppuyez OK pour créer une nouvelle zone,\nVous pouvez aussi cliquer sur une zone pour l'éditer.`,
+      ''
+    );
+    if (choice === null) return; // Cancel
   }
+
+  startNewZone();
+}
+
+function startNewZone() {
+  isDrawing = true;
+  currentPolygon = [];
+  editingPolygonMarkers = [];
+  editingZoneId = null;
+
+  document.getElementById('draw-polygon').style.background = '#c85a3a';
+  document.getElementById('draw-polygon').textContent = '✏️ Mode dessin (Esc pour finir)';
+}
+
+function editZone(zoneId) {
+  editingZoneId = zoneId;
+  const zone = zones[zoneId];
+  isDrawing = true;
+  currentPolygon = [...zone.coordinates];
+  editingPolygonMarkers = [];
+
+  // Show existing points
+  currentPolygon.forEach(([lat, lon]) => {
+    const marker = L.circleMarker([lat, lon], {
+      radius: 5,
+      fillColor: zone.color,
+      color: zone.color,
+      weight: 2,
+      opacity: 0.8,
+      fillOpacity: 0.8
+    }).addTo(map);
+    editingPolygonMarkers.push(marker);
+  });
+
+  document.getElementById('draw-polygon').style.background = '#c85a3a';
+  document.getElementById('draw-polygon').textContent = '✏️ Mode édition (Esc pour finir)';
+  alert(`Édition de la zone Rep ${zone.rep}\nCliquez pour ajouter des points\nAppuyez sur Échap pour terminer`);
 }
 
 function onMapClick(e) {
@@ -118,34 +176,43 @@ function finishPolygon() {
   }
 
   isDrawing = false;
-  document.getElementById('draw-polygon').style.background = '#667eea';
+  document.getElementById('draw-polygon').style.background = '#2c5f2d';
   document.getElementById('draw-polygon').textContent = '✏️ Dessiner Zone';
 
-  // Créer le polygone
-  const polygon = L.polygon(currentPolygon, {
-    color: REP_COLORS[currentRep],
-    weight: 2,
-    opacity: 0.8,
-    fillColor: REP_COLORS[currentRep],
-    fillOpacity: 0.2
-  });
+  // Nettoyer les marqueurs d'édition
+  editingPolygonMarkers.forEach(marker => map.removeLayer(marker));
+  editingPolygonMarkers = [];
 
-  polygon.addTo(map);
+  // Si on édite une zone existante, la supprimer d'abord
+  if (editingZoneId) {
+    const oldZone = zones[editingZoneId];
+    drawnPolygons.forEach((poly, i) => {
+      if (drawnPolygons[i]) map.removeLayer(poly);
+    });
+    drawnPolygons = drawnPolygons.filter(p => p);
+    zones[editingZoneId].coordinates = currentPolygon;
+    saveZone(zones[editingZoneId]);
+    editingZoneId = null;
+    console.log(`✅ Zone mise à jour`);
+  } else {
+    // Créer une nouvelle zone
+    const zoneId = `zone-${currentRep}-${Date.now()}`;
+    zones[zoneId] = {
+      id: zoneId,
+      rep: currentRep,
+      coordinates: currentPolygon,
+      color: REP_COLORS[currentRep]
+    };
+    saveZone(zones[zoneId]);
+    console.log(`✅ Zone Rep ${currentRep} créée`);
+  }
 
-  // Sauvegarder
-  const zoneId = `zone-${currentRep}-${Date.now()}`;
-  zones[zoneId] = {
-    id: zoneId,
-    rep: currentRep,
-    coordinates: currentPolygon,
-    color: REP_COLORS[currentRep]
-  };
-
-  saveZone(zones[zoneId]);
-  drawnPolygons.push(polygon);
+  // Réafficher les zones
+  drawnPolygons = [];
+  layers.zones.forEach(poly => map.removeLayer(poly));
+  layers.zones = [];
+  Object.keys(zones).forEach(zoneId => displayZone(zoneId, zones[zoneId]));
   currentPolygon = [];
-
-  console.log(`✅ Zone Rep ${currentRep} créée`);
 }
 
 // ===== CHARGEMENT DONNÉES =====
@@ -215,7 +282,14 @@ function displayZone(zoneId, zone) {
     fillOpacity: 0.2
   });
 
-  polygon.bindPopup(`<strong>Zone - Rep ${zone.rep}</strong>`);
+  const popupContent = `<strong>Zone - Rep ${zone.rep}</strong><br><button onclick="editZone('${zoneId}')" style="margin-top:8px; padding:5px 10px; cursor:pointer; background: ${zone.color}; color: white; border: none; border-radius: 4px;">✏️ Éditer</button>`;
+  polygon.bindPopup(popupContent);
+  polygon.on('click', function(e) {
+    if (currentRep === zone.rep) {
+      e.target.openPopup();
+    }
+  });
+
   map.addLayer(polygon);
   layers.zones.push(polygon);
   drawnPolygons.push(polygon);
@@ -224,18 +298,18 @@ function displayZone(zoneId, zone) {
 // ===== ITINÉRAIRES =====
 async function calculateRoute(lat, lon, name) {
   const routeInfo = document.getElementById('route-info');
+  const origin = repLocations[currentRep];
+
+  if (!origin.lat || !origin.lon) {
+    routeInfo.innerHTML = '⚠️ Veuillez d\'abord définir le domicile du représentant';
+    routeInfo.classList.add('active');
+    return;
+  }
+
   routeInfo.innerHTML = '⏳ Calcul en cours...';
   routeInfo.classList.add('active');
 
   try {
-    // Coordonnées domiciles
-    const repLocations = {
-      1: { lat: 45.467, lon: -72.057 },  // Cookshire
-      2: { lat: 46.8139, lon: -71.2080 }, // Québec
-      3: { lat: 48.3894, lon: -71.2036 }  // Chicoutimi
-    };
-
-    const origin = repLocations[currentRep];
     const response = await fetch(`${API_BASE}/api/route`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -276,6 +350,41 @@ function deleteZone(zoneId) {
   saveZonesToStorage(zones);
   console.log(`✅ Zone ${zoneId} supprimée`);
 }
+
+// ===== REP LOCATION MANAGEMENT =====
+function updateRepLocationDisplay() {
+  const rep = currentRep;
+  const location = repLocations[rep];
+  const latInput = document.getElementById('rep-lat');
+  const lonInput = document.getElementById('rep-lon');
+  const addressInput = document.getElementById('rep-address');
+  const infoDiv = document.getElementById('rep-location-info');
+
+  latInput.value = location.lat.toFixed(4);
+  lonInput.value = location.lon.toFixed(4);
+  addressInput.value = location.address || '';
+
+  if (location.address) {
+    infoDiv.innerHTML = `<i class="fas fa-check-circle" style="color: var(--accent);"></i> ${location.address}<br><small>${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}</small>`;
+  } else {
+    infoDiv.innerHTML = '<i class="fas fa-info-circle"></i> Entrez l\'adresse du domicile';
+  }
+}
+
+document.getElementById('save-rep-location').addEventListener('click', () => {
+  const lat = parseFloat(document.getElementById('rep-lat').value);
+  const lon = parseFloat(document.getElementById('rep-lon').value);
+  const address = document.getElementById('rep-address').value;
+
+  if (isNaN(lat) || isNaN(lon)) {
+    alert('Veuillez entrer des coordonnées valides');
+    return;
+  }
+
+  repLocations[currentRep] = { lat, lon, address };
+  saveRepLocations();
+  console.log(`✅ Localisation Rep ${currentRep} sauvegardée`);
+});
 
 // ===== RECHERCHE PAR VILLE =====
 const citySearchInput = document.getElementById('city-search');
@@ -366,6 +475,7 @@ document.querySelectorAll('.rep-btn').forEach(btn => {
     e.target.classList.add('active');
     currentRep = parseInt(e.target.dataset.rep);
     document.getElementById('route-info').innerHTML = '';
+    updateRepLocationDisplay();
     console.log(`Rep sélectionné: ${currentRep}`);
   });
 });

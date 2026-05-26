@@ -62,6 +62,39 @@
                         </div>
                     </div>
 
+                    <!-- Rep Location Panel -->
+                    <div class="panel rep-location-panel">
+                        <h3><i class="fas fa-home"></i> Domicile Rep</h3>
+                        <div class="rep-location-form">
+                            <input
+                                type="text"
+                                id="rep-address"
+                                class="search-input"
+                                placeholder="Adresse du domicile"
+                            >
+                            <div class="location-inputs">
+                                <input
+                                    type="number"
+                                    id="rep-lat"
+                                    class="coord-input"
+                                    placeholder="Latitude"
+                                    step="0.0001"
+                                >
+                                <input
+                                    type="number"
+                                    id="rep-lon"
+                                    class="coord-input"
+                                    placeholder="Longitude"
+                                    step="0.0001"
+                                >
+                            </div>
+                            <button id="save-rep-location" class="btn-primary">
+                                <i class="fas fa-save"></i> Sauvegarder
+                            </button>
+                            <div id="rep-location-info" class="location-info"></div>
+                        </div>
+                    </div>
+
                     <!-- Tools Panel -->
                     <div class="panel tools-panel">
                         <h3><i class="fas fa-tools"></i> Outils</h3>
@@ -100,9 +133,6 @@
                             </button>
                             <button class="basemap-btn" data-basemap="voyager" title="Voyager">
                                 <i class="fas fa-square-full"></i> Complet
-                            </button>
-                            <button class="basemap-btn" data-basemap="dark" title="Dark Matter">
-                                <i class="fas fa-square-full"></i> Sombre
                             </button>
                         </div>
                     </div>
