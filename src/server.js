@@ -225,8 +225,9 @@ app.get('/api/health', (req, res) => {
 
 // Démarrer serveur
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Serveur démarré sur http://${HOST}:${PORT}`);
 });
 
 module.exports = app;
