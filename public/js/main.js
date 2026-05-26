@@ -37,7 +37,15 @@ function saveZonesToStorage(zonesObj) {
 function loadRepLocations() {
   const stored = localStorage.getItem(REP_LOCATIONS_KEY);
   if (stored) {
-    repLocations = JSON.parse(stored);
+    try {
+      const parsed = JSON.parse(stored);
+      repLocations = parsed;
+      console.log(`✅ Rep locations chargées du localStorage:`, repLocations);
+    } catch (e) {
+      console.warn('⚠️ Impossible de charger rep locations, utilisation des valeurs par défaut', e);
+    }
+  } else {
+    console.log('✅ Utilisation des rep locations par défaut');
   }
 }
 
@@ -375,31 +383,49 @@ async function calculateRoute(lat, lon, name) {
   routeInfo.classList.add('active');
 
   try {
+    if (!origin || typeof origin !== 'object') {
+      routeInfo.innerHTML = '❌ Erreur: Lieu d\'origine non défini';
+      console.error('Origin invalide:', origin);
+      return;
+    }
+
     const requestBody = {
-      origin: { lat: origin.lat, lon: origin.lon },
-      destination: { lat, lon }
+      origin: { lat: parseFloat(origin.lat), lon: parseFloat(origin.lon) },
+      destination: { lat: parseFloat(lat), lon: parseFloat(lon) }
     };
+
+    if (isNaN(requestBody.origin.lat) || isNaN(requestBody.origin.lon)) {
+      routeInfo.innerHTML = '❌ Erreur: Coordonnées d\'origine invalides. Veuillez vérifier le domicile du rep.';
+      console.error('Coordonnées invalides:', requestBody.origin);
+      return;
+    }
 
     console.log('📤 Requête:', requestBody);
 
     const response = await fetch(`${API_BASE}/api/route`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      timeout: 10000
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
     console.log(`📥 Réponse status: ${response.status}`);
     const route = await response.json();
     console.log('📥 Réponse body:', route);
 
     if (route.error) {
-      routeInfo.innerHTML = `❌ Erreur: ${route.error}`;
+      routeInfo.innerHTML = `❌ Erreur serveur: ${route.error}`;
       console.error('Erreur API:', route.error);
       return;
     }
 
-    if (!route.distance || !route.duration) {
-      routeInfo.innerHTML = '❌ Données d\'itinéraire invalides';
+    if (route.distance === undefined || route.duration === undefined) {
+      routeInfo.innerHTML = '❌ Réponse serveur invalide (distance/durée manquantes)';
+      console.error('Données manquantes:', route);
       return;
     }
 
