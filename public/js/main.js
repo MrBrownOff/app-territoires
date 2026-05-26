@@ -1,15 +1,33 @@
 // ===== CONFIGURATION =====
 const API_BASE = '';
-const STORAGE_KEY = 'territoires_zones';  // localStorage key
+const STORAGE_KEY = 'territoires_zones';
 
 const REP_COLORS = {
-  1: '#ff0000',
-  2: '#00cc00',
-  3: '#0066ff'
+  1: '#2c5f2d',   /* Forest Green */
+  2: '#c85a3a',   /* Warm Orange */
+  3: '#6b4c89'    /* Deep Purple */
 };
 
 const CLIENT_COLOR = '#0066cc';
-const PROSPECT_COLOR = '#ffaa00';
+
+// CartoDB Basemaps
+const BASEMAPS = {
+  positron: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+    maxZoom: 19,
+    id: 'positron'
+  }),
+  voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastered/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+    maxZoom: 19,
+    id: 'voyager'
+  }),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+    maxZoom: 19,
+    id: 'dark'
+  })
+};
 
 // ===== LOCALSTORAGE UTILS =====
 function loadZonesFromStorage() {
@@ -35,6 +53,9 @@ let layers = {
   zones: []
 };
 
+let currentBasemap = 'positron';
+let uniqueCities = new Set();
+
 // ===== INITIALISATION CARTE =====
 function initMap() {
   map = L.map('map', {
@@ -44,15 +65,9 @@ function initMap() {
     attributionControl: true
   });
 
-  // ✅ OpenStreetMap (gratuit, pas de CORS)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-  }).addTo(map);
+  // Ajouter le basemap par défaut (CartoDB Positron)
+  BASEMAPS.positron.addTo(map);
 
-  console.log('✅ Carte chargée avec OpenStreetMap');
-
-  // Événement clic pour dessiner
   map.on('click', onMapClick);
 
   loadData();
@@ -157,10 +172,15 @@ async function loadData() {
 
 // ===== AFFICHAGE MARQUEURS =====
 function displayMarkers(type) {
-  const data = canac;  // Toujours Canac
-  const color = CLIENT_COLOR;  // Bleu
+  const data = canac;
+  const color = CLIENT_COLOR;
 
   data.forEach(item => {
+    // Ajouter la ville à la liste pour la recherche
+    if (item.city) {
+      uniqueCities.add(item.city);
+    }
+
     const marker = L.circleMarker([item.lat, item.lon], {
       radius: 6,
       fillColor: color,
@@ -257,7 +277,89 @@ function deleteZone(zoneId) {
   console.log(`✅ Zone ${zoneId} supprimée`);
 }
 
+// ===== RECHERCHE PAR VILLE =====
+const citySearchInput = document.getElementById('city-search');
+const searchResultsList = document.getElementById('search-results');
+
+function filterCitiesByQuery(query) {
+  if (!query) {
+    searchResultsList.innerHTML = '';
+    return [];
+  }
+
+  const lowerQuery = query.toLowerCase();
+  return Array.from(uniqueCities)
+    .filter(city => city.toLowerCase().includes(lowerQuery))
+    .sort()
+    .slice(0, 10);
+}
+
+function updateSearchResults(query) {
+  const results = filterCitiesByQuery(query);
+  searchResultsList.innerHTML = '';
+
+  results.forEach(city => {
+    const li = document.createElement('li');
+    li.textContent = city;
+    li.addEventListener('click', () => {
+      zoomToCity(city);
+      citySearchInput.value = '';
+      searchResultsList.innerHTML = '';
+    });
+    searchResultsList.appendChild(li);
+  });
+}
+
+function zoomToCity(city) {
+  const cityMarkers = layers.canac.filter(marker => {
+    const popupContent = marker.getPopup().getContent();
+    return popupContent.includes(`<br>${city}<br>`);
+  });
+
+  if (cityMarkers.length > 0) {
+    // Calculer les limites de tous les marqueurs de la ville
+    const group = new L.featureGroup(cityMarkers);
+    map.fitBounds(group.getBounds(), { padding: [50, 50] });
+  }
+}
+
+citySearchInput.addEventListener('input', (e) => {
+  updateSearchResults(e.target.value);
+});
+
+// Fermer les résultats de recherche en cliquant ailleurs
+document.addEventListener('click', (e) => {
+  if (e.target !== citySearchInput && !citySearchInput.contains(e.target)) {
+    searchResultsList.innerHTML = '';
+  }
+});
+
+// ===== BASEMAP SWITCHER =====
+function switchBasemap(basemapId) {
+  if (currentBasemap === basemapId) return;
+
+  // Supprimer l'ancien basemap
+  map.removeLayer(BASEMAPS[currentBasemap]);
+
+  // Ajouter le nouveau basemap
+  BASEMAPS[basemapId].addTo(map);
+  currentBasemap = basemapId;
+
+  // Mettre à jour le bouton actif
+  document.querySelectorAll('.basemap-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.basemap === basemapId);
+  });
+
+  console.log(`✅ Basemap changé en: ${basemapId}`);
+}
+
 // ===== CONTRÔLES UI =====
+document.querySelectorAll('.basemap-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    switchBasemap(e.target.closest('.basemap-btn').dataset.basemap);
+  });
+});
+
 document.querySelectorAll('.rep-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     document.querySelectorAll('.rep-btn').forEach(b => b.classList.remove('active'));

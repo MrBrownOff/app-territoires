@@ -3,71 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion Territoriale - Représentants de Ventes</title>
-    
-    <!-- Leaflet (sans Leaflet-Draw qui pose des problèmes CORS) -->
+    <title>Interbois - Gestion Territoriale</title>
+
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🗺️ Gestion Territoriale - Représentants de Ventes</h1>
-            <p>Gérez les zones de travail et visualisez les clients</p>
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1>🌲 Interbois</h1>
+                    <p class="tagline">Gestion Territoriale</p>
+                </div>
+                <p class="header-subtitle">Visualisez vos zones de travail et optimisez vos itinéraires</p>
+            </div>
         </header>
 
         <main>
             <div class="map-container">
                 <div id="map"></div>
-                
+
                 <div class="sidebar">
-                    <div class="panel">
-                        <h3>Représentants</h3>
-                        <div class="rep-selector">
-                            <button class="rep-btn active" data-rep="1" style="border-color: #0066cc;">Rep 1</button>
-                            <button class="rep-btn" data-rep="2" style="border-color: #cc0000;">Rep 2</button>
-                            <button class="rep-btn" data-rep="3" style="border-color: #00cc00;">Rep 3</button>
+                    <!-- Search Panel -->
+                    <div class="panel search-panel">
+                        <h3><i class="fas fa-search"></i> Recherche</h3>
+                        <div class="search-wrapper">
+                            <input
+                                type="text"
+                                id="city-search"
+                                class="search-input"
+                                placeholder="Chercher une ville..."
+                                autocomplete="off"
+                            >
+                            <ul id="search-results" class="search-results"></ul>
                         </div>
                     </div>
 
-                    <div class="panel">
-                        <h3>Outils</h3>
-                        <button id="draw-polygon" class="btn-primary">✏️ Dessiner Zone</button>
-                        <button id="clear-zones" class="btn-secondary">🗑️ Effacer Zones</button>
-                        <button id="export-zones" class="btn-secondary">💾 Exporter</button>
+                    <!-- Representatives Panel -->
+                    <div class="panel rep-panel">
+                        <h3><i class="fas fa-users"></i> Représentants</h3>
+                        <div class="rep-selector">
+                            <button class="rep-btn active" data-rep="1" style="--rep-color: #2c5f2d;">
+                                <i class="fas fa-user"></i> Rep 1
+                            </button>
+                            <button class="rep-btn" data-rep="2" style="--rep-color: #c85a3a;">
+                                <i class="fas fa-user"></i> Rep 2
+                            </button>
+                            <button class="rep-btn" data-rep="3" style="--rep-color: #6b4c89;">
+                                <i class="fas fa-user"></i> Rep 3
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="panel">
-                        <h3>Affichage</h3>
-                        <label>
-                            <input type="checkbox" id="show-clients" checked> Magasins Canac
-                        </label>
-                        <label>
-                            <input type="checkbox" id="show-zones" checked> Zones
-                        </label>
+                    <!-- Tools Panel -->
+                    <div class="panel tools-panel">
+                        <h3><i class="fas fa-tools"></i> Outils</h3>
+                        <button id="draw-polygon" class="btn-primary">
+                            <i class="fas fa-pen-nib"></i> Dessiner Zone
+                        </button>
+                        <button id="clear-zones" class="btn-secondary">
+                            <i class="fas fa-trash"></i> Effacer Zones
+                        </button>
+                        <button id="export-zones" class="btn-secondary">
+                            <i class="fas fa-download"></i> Exporter
+                        </button>
                     </div>
 
-                    <div class="panel">
-                        <h3>Itinéraires</h3>
-                        <p class="small-text">Cliquez sur un client pour voir l'itinéraire depuis le domicile du représentant</p>
+                    <!-- Map Layers Panel -->
+                    <div class="panel display-panel">
+                        <h3><i class="fas fa-layer-group"></i> Affichage</h3>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-clients" checked>
+                                <span>Magasins Canac</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-zones" checked>
+                                <span>Zones</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Basemap Selector -->
+                    <div class="panel basemap-panel">
+                        <h3><i class="fas fa-map"></i> Fond de carte</h3>
+                        <div class="basemap-selector">
+                            <button class="basemap-btn active" data-basemap="positron" title="Positron (Recommandé)">
+                                <i class="fas fa-square-full"></i> Clair
+                            </button>
+                            <button class="basemap-btn" data-basemap="voyager" title="Voyager">
+                                <i class="fas fa-square-full"></i> Complet
+                            </button>
+                            <button class="basemap-btn" data-basemap="dark" title="Dark Matter">
+                                <i class="fas fa-square-full"></i> Sombre
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Routes Panel -->
+                    <div class="panel routes-panel">
+                        <h3><i class="fas fa-route"></i> Itinéraires</h3>
+                        <p class="small-text">Cliquez sur un magasin pour calculer l'itinéraire depuis votre domicile</p>
                         <div id="route-info" class="route-info"></div>
                     </div>
 
+                    <!-- Legend -->
                     <div class="legend">
-                        <h4>Légende</h4>
+                        <h4><i class="fas fa-book"></i> Légende</h4>
                         <div class="legend-item">
-                            <span class="legend-color" style="background: #0066cc;"></span> Magasins Canac
+                            <span class="legend-color" style="background: #0066cc;"></span>
+                            <span>Magasins Canac</span>
                         </div>
                         <div class="legend-item">
-                            <span class="legend-color" style="background: #ff0000;"></span> Zone Rep 1
+                            <span class="legend-color" style="background: #2c5f2d;"></span>
+                            <span>Zone Rep 1</span>
                         </div>
                         <div class="legend-item">
-                            <span class="legend-color" style="background: #00cc00;"></span> Zone Rep 2
+                            <span class="legend-color" style="background: #c85a3a;"></span>
+                            <span>Zone Rep 2</span>
                         </div>
                         <div class="legend-item">
-                            <span class="legend-color" style="background: #0066ff;"></span> Zone Rep 3
+                            <span class="legend-color" style="background: #6b4c89;"></span>
+                            <span>Zone Rep 3</span>
                         </div>
                     </div>
                 </div>
