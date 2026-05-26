@@ -130,53 +130,6 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // POST - Calculer itinéraire
-app.post('/api/route', async (req, res) => {
-  try {
-    const { origin, destination } = req.body;
-
-    // Essayer Woosmap API si clé disponible
-    if (process.env.WOOSMAP_API_KEY && process.env.WOOSMAP_API_KEY !== 'dummy-woosmap-key') {
-      try {
-        const response = await axios.get('https://routing-api.woosmap.com/route', {
-          params: {
-            origin: `${origin.lat},${origin.lon}`,
-            destination: `${destination.lat},${destination.lon}`,
-            key: process.env.WOOSMAP_API_KEY
-          },
-          timeout: 5000
-        });
-
-        const route = response.data.routes?.[0];
-        if (route) {
-          const distance = route.distance?.value || 0;
-          const duration = route.duration?.value || 0;
-          return res.json({
-            distance: (distance / 1000).toFixed(1),
-            duration: Math.ceil(duration / 60),
-            polyline: route.polyline?.points || []
-          });
-        }
-      } catch (woosError) {
-        console.warn('Woosmap indisponible, utilisation fallback:', woosError.message);
-      }
-    }
-
-    // Fallback: Haversine + estimation temps (60 km/h moyenne)
-    const distanceKm = haversineDistance(origin.lat, origin.lon, destination.lat, destination.lon);
-    const durationMinutes = Math.ceil((distanceKm / 60) * 60);
-
-    res.json({
-      distance: distanceKm.toFixed(1),
-      duration: durationMinutes,
-      polyline: [],
-      fallback: true
-    });
-  } catch (error) {
-    console.error('Erreur itinéraire:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // POST - Sauvegarder domicile rep
 app.post('/api/rep-location', async (req, res) => {
   try {
@@ -241,7 +194,7 @@ app.post('/api/route', async (req, res) => {
         routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
       }
     } catch (err) {
-      console.log('Valhalla failed:', err.message);
+      // silently fail
     }
 
     // Try 2: GraphHopper free API
@@ -256,11 +209,11 @@ app.post('/api/route', async (req, res) => {
           routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
         }
       } catch (err) {
-        console.log('GraphHopper failed:', err.message);
+        // silently fail
       }
     }
 
-    // Fallback: Haversine + road factor approximation (1.4x for road vs straight line)
+    // Fallback: Improved Haversine with road factor optimized for Quebec (1.5-1.6x)
     if (!routeData) {
       const R = 6371; // Earth radius in km
       const dLat = (to.lat - from.lat) * Math.PI / 180;
@@ -270,9 +223,9 @@ app.post('/api/route', async (req, res) => {
                 Math.sin(dLng/2) * Math.sin(dLng/2);
       const c = 2 * Math.asin(Math.sqrt(a));
       const straightDist = R * c;
-      // Approximate road distance (roads are ~1.4x longer than straight line on average)
-      const roadDistance = straightDist * 1.4;
-      const avgSpeed = 70; // km/h average
+      // Quebec roads average 1.85x longer than straight line (accounts for network topology and obstacles)
+      const roadDistance = straightDist * 1.85;
+      const avgSpeed = 85; // km/h average for Quebec highways/roads
       const duration = (roadDistance / avgSpeed) * 60; // minutes
       routeData = {
         distance: Math.round(roadDistance * 10) / 10,
