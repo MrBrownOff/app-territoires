@@ -1,147 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interbois - Gestion Territoriale</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>interbois — Gestion territoriale</title>
 
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Foundations: brand tokens + base type -->
+  <link rel="stylesheet" href="interbois.css" />
 
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
 
-    <link rel="stylesheet" href="css/style.css">
+  <!-- App-specific layout/overrides -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="logo-section">
-                    <h1>🌲 Interbois</h1>
-                    <p class="tagline">Gestion Territoriale</p>
-                </div>
-                <p class="header-subtitle">Visualisez vos zones de travail et optimisez vos itinéraires</p>
-            </div>
-        </header>
+  <div id="root"></div>
 
-        <main>
-            <div class="map-container">
-                <div id="map"></div>
+  <!-- Leaflet first (defines L) -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
-                <div class="sidebar">
-                    <!-- Search Panel -->
-                    <div class="panel search-panel">
-                        <h3><i class="fas fa-search"></i> Recherche</h3>
-                        <div class="search-wrapper">
-                            <input
-                                type="text"
-                                id="city-search"
-                                class="search-input"
-                                placeholder="Chercher une ville..."
-                                autocomplete="off"
-                            >
-                            <ul id="search-results" class="search-results"></ul>
-                        </div>
-                    </div>
+  <!-- Mock data -->
+  <script src="data.js"></script>
 
-                    <!-- Representatives Panel -->
-                    <div class="panel rep-panel">
-                        <h3><i class="fas fa-users"></i> Représentants</h3>
-                        <div class="rep-selector">
-                            <button class="rep-btn active" data-rep="1" style="--rep-color: #2c5f2d;">
-                                <i class="fas fa-user"></i> Rep 1
-                            </button>
-                            <button class="rep-btn" data-rep="2" style="--rep-color: #c85a3a;">
-                                <i class="fas fa-user"></i> Rep 2
-                            </button>
-                        </div>
-                    </div>
+  <!-- React + Babel (pinned per system requirements) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-                    <!-- Rep Location Panel -->
-                    <div class="panel rep-location-panel">
-                        <h3><i class="fas fa-home"></i> Domicile Rep</h3>
-                        <div class="rep-location-form">
-                            <input
-                                type="text"
-                                id="rep-address"
-                                class="search-input"
-                                placeholder="Adresse du domicile"
-                            >
-                            <div class="location-inputs">
-                                <input
-                                    type="number"
-                                    id="rep-lat"
-                                    class="coord-input"
-                                    placeholder="Latitude"
-                                    step="0.0001"
-                                >
-                                <input
-                                    type="number"
-                                    id="rep-lon"
-                                    class="coord-input"
-                                    placeholder="Longitude"
-                                    step="0.0001"
-                                >
-                            </div>
-                            <button id="save-rep-location" class="btn-primary">
-                                <i class="fas fa-save"></i> Sauvegarder
-                            </button>
-                            <div id="rep-location-info" class="location-info"></div>
-                        </div>
-                    </div>
+  <!-- Tweaks shell (must load before app uses TweaksPanel / useTweaks) -->
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
 
-                    <!-- Territories Panel -->
-                    <div class="panel territories-panel">
-                        <h3><i class="fas fa-map-marked-alt"></i> Territoires</h3>
-                        <button id="init-territories" class="btn-primary">
-                            <i class="fas fa-rocket"></i> Initialiser Territoires
-                        </button>
-                        <div id="territories-stats" class="territories-stats"></div>
-                    </div>
-
-
-                    <!-- Map Layers Panel -->
-                    <div class="panel display-panel">
-                        <h3><i class="fas fa-layer-group"></i> Affichage</h3>
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="show-clients" checked>
-                                <span>Magasins Canac</span>
-                            </label>
-                        </div>
-                    </div>
-
-
-                    <!-- Routes Panel -->
-                    <div class="panel routes-panel">
-                        <h3><i class="fas fa-route"></i> Itinéraires</h3>
-                        <p class="small-text">Cliquez sur un magasin pour calculer l'itinéraire depuis votre domicile</p>
-                        <div id="route-info" class="route-info"></div>
-                    </div>
-
-                    <!-- Legend -->
-                    <div class="legend">
-                        <h4><i class="fas fa-book"></i> Légende</h4>
-                        <div class="legend-section">
-                            <p class="legend-title"><i class="fas fa-store"></i> <strong>Magasins</strong></p>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background: #2c5f2d; border-radius: 50%; width: 12px; height: 12px;"></span>
-                                <span>Rep 1 - Cookshire</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background: #c85a3a; border-radius: 50%; width: 12px; height: 12px;"></span>
-                                <span>Rep 2 - Québec</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script src="js/territories.js"></script>
-    <script src="js/main.js"></script>
+  <!-- Main app -->
+  <script type="text/babel" src="app.jsx"></script>
 </body>
 </html>

@@ -1,0 +1,715 @@
+/* =========================================================================
+   Interbois — Gestion territoriale (app-specific)
+   ========================================================================= */
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--fg1);
+  background: var(--bg);
+}
+
+/* ------ Shell -------------------------------------------------------- */
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+/* ------ Header ------------------------------------------------------- */
+.app-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: 14px var(--sp-6);
+  background: var(--ib-black);
+  color: var(--ib-white);
+  border-bottom: var(--bw-hair) solid var(--ib-black);
+  position: relative;
+  z-index: 600;
+}
+
+.app-header .wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.app-header .wordmark img {
+  height: 22px;
+  display: block;
+}
+.app-header .wordmark .divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255,255,255,0.25);
+}
+.app-header .wordmark .label {
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+  color: var(--ib-grey-medium);
+}
+
+.app-header .meta {
+  display: flex;
+  gap: var(--sp-5);
+  justify-content: flex-end;
+  align-items: center;
+  font-size: var(--fs-small);
+  color: var(--ib-grey-medium);
+}
+
+.app-header .meta .item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.app-header .meta .item b {
+  color: var(--ib-white);
+  font-weight: var(--fw-semibold);
+}
+
+.app-header .demi-rond {
+  width: 10px;
+  height: 5px;
+  background: var(--ib-orange);
+  border-radius: 999px 999px 0 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ------ Main split --------------------------------------------------- */
+.app-main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: 0;
+}
+.app[data-side="right"] .app-main {
+  grid-template-columns: 1fr 380px;
+}
+.app[data-side="right"] .sidebar { order: 2; border-right: 0; border-left: var(--bw-hair) solid var(--border); }
+
+/* ------ Sidebar ------------------------------------------------------ */
+.sidebar {
+  background: var(--ib-white);
+  border-right: var(--bw-hair) solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--ib-grey-medium); }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+
+.sb-section {
+  padding: var(--sp-5) var(--sp-5);
+  border-bottom: var(--bw-hair) solid var(--border-subtle);
+}
+.app[data-density="compact"] .sb-section {
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.sb-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+  color: var(--fg2);
+  margin: 0 0 var(--sp-3) 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sb-eyebrow .num {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-regular);
+  color: var(--fg3);
+  margin-left: auto;
+}
+
+/* Search */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: var(--bw-hair) solid var(--border-strong);
+  background: var(--ib-white);
+}
+.search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  padding: 10px 12px 10px 36px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: transparent;
+  color: var(--fg1);
+}
+.search input::placeholder { color: var(--fg3); }
+.search .icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg2);
+  pointer-events: none;
+}
+.search:focus-within { outline: 2px solid var(--ib-orange); outline-offset: 2px; }
+
+/* Rep card */
+.rep {
+  border: var(--bw-hair) solid var(--border);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+  position: relative;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+.rep:last-child { margin-bottom: 0; }
+.rep:hover { border-color: var(--border-strong); }
+.rep.is-active {
+  border-color: var(--border-strong);
+  border-left-width: 3px;
+  padding-left: calc(var(--sp-4) - 2px);
+}
+
+.rep-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--sp-3);
+}
+.rep-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--rep-color, var(--ib-black));
+  flex-shrink: 0;
+}
+.rep-name {
+  font-weight: var(--fw-semibold);
+  font-size: 14px;
+  color: var(--fg1);
+  flex: 1;
+  min-width: 0;
+}
+.rep-region {
+  font-size: 11px;
+  color: var(--fg2);
+  letter-spacing: 0.04em;
+}
+
+.rep-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px var(--sp-4);
+  font-size: 12px;
+}
+.rep-stats .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px dotted var(--border);
+  padding: 2px 0;
+}
+.rep-stats .row .k { color: var(--fg2); }
+.rep-stats .row .v {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-semibold);
+  color: var(--fg1);
+}
+
+.rep-foot {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.rep-foot .km {
+  font-family: var(--font-mono);
+  text-transform: none;
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--fg1);
+}
+
+/* Buttons */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border: var(--bw-hair) solid var(--ib-black);
+  background: var(--ib-black);
+  color: var(--ib-white);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.btn:hover { background: var(--ib-orange); border-color: var(--ib-orange); }
+.btn:active { transform: scale(0.99); }
+.btn .arrow { font-family: var(--font-mono); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ib-black);
+}
+.btn--ghost:hover { background: var(--ib-black); color: var(--ib-white); border-color: var(--ib-black); }
+
+.btn--sm {
+  font-size: 11px;
+  padding: 8px 12px;
+}
+
+/* Toggle layer rows */
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle .sw {
+  width: 32px;
+  height: 18px;
+  background: var(--ib-grey-light);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  position: relative;
+  transition: background var(--dur-fast) var(--ease-standard);
+  flex-shrink: 0;
+}
+.toggle .sw::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--ib-white);
+  border-radius: 999px;
+  top: 2px;
+  left: 2px;
+  transition: left var(--dur-fast) var(--ease-standard);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.toggle.is-on .sw { background: var(--ib-black); border-color: var(--ib-black); }
+.toggle.is-on .sw::after { left: 16px; }
+.toggle .label {
+  font-size: 13px;
+  color: var(--fg1);
+  flex: 1;
+}
+.toggle .count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg2);
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legend .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--fg1);
+}
+.legend .mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--ib-black);
+  flex-shrink: 0;
+}
+.legend .mark--home {
+  border-radius: 0;
+  background: transparent;
+  border: 2px solid var(--ib-black);
+}
+.legend .mark--route {
+  height: 2px;
+  border-radius: 0;
+  width: 18px;
+}
+
+/* Status bar / route panel */
+.route-info {
+  background: var(--ib-black);
+  color: var(--ib-white);
+  padding: var(--sp-4) var(--sp-5);
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+}
+.route-info .label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ib-grey-medium);
+  margin-bottom: 4px;
+}
+.route-info .dest {
+  font-size: 15px;
+  font-weight: var(--fw-semibold);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.route-info .stats {
+  display: flex;
+  gap: var(--sp-5);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.route-info .stats .v {
+  font-weight: var(--fw-semibold);
+  font-size: 18px;
+  color: var(--ib-orange);
+  display: block;
+  font-family: var(--font-sans);
+}
+.route-info .stats .k {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ib-grey-medium);
+}
+.route-info .close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--ib-grey-medium);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  line-height: 1;
+}
+.route-info .close:hover { color: var(--ib-white); }
+
+/* ------ Map area ----------------------------------------------------- */
+.map-wrap {
+  position: relative;
+  background: var(--ib-grey-light);
+  min-width: 0;
+}
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #f5f5f3;
+  font-family: var(--font-sans);
+}
+
+/* Hide Leaflet zoom buttons we don't want; provide custom */
+.leaflet-control-zoom { display: none; }
+
+/* Custom zoom buttons */
+.map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--ib-white);
+  border: var(--bw-hair) solid var(--ib-black);
+}
+.map-controls button {
+  width: 36px;
+  height: 36px;
+  background: var(--ib-white);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  color: var(--ib-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.map-controls button:last-child { border-bottom: 0; }
+.map-controls button:hover { background: var(--ib-black); color: var(--ib-white); }
+
+/* Scale/coordinate readout corner */
+.map-readout {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: var(--ib-white);
+  border: var(--bw-hair) solid var(--ib-black);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg1);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.map-readout .demi {
+  width: 12px;
+  height: 6px;
+  background: var(--ib-orange);
+  border-radius: 999px 999px 0 0;
+}
+.map-readout .num {
+  letter-spacing: 0.05em;
+}
+
+/* Marker dot — point plein */
+.ib-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ib-white);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.25);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+.ib-marker--rep1 { background: var(--ib-black); }
+.ib-marker--rep2 { background: var(--ib-orange); }
+.ib-marker:hover { transform: scale(1.4); cursor: pointer; }
+.ib-marker.is-selected {
+  transform: scale(1.6);
+  box-shadow: 0 0 0 2px var(--ib-orange), 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* Home marker — demi-rond / half-circle on top of a rect */
+.ib-home {
+  width: 26px;
+  height: 26px;
+  background: var(--ib-white);
+  border: 2px solid var(--ib-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  position: relative;
+}
+.ib-home::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 7px;
+  background: var(--ib-black);
+  border-radius: 999px 999px 0 0;
+}
+.ib-home--rep2::before { background: var(--ib-orange); }
+.ib-home.is-active { box-shadow: 0 0 0 3px var(--ib-orange); }
+
+/* Pin marker variant */
+.ib-marker--pin {
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  position: relative;
+}
+.ib-marker--pin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px 999px 999px 0;
+  transform: rotate(-45deg);
+  transform-origin: center;
+}
+.ib-marker--pin.ib-marker--rep1::before { background: var(--ib-black); }
+.ib-marker--pin.ib-marker--rep2::before { background: var(--ib-orange); }
+
+/* Ring marker variant */
+.ib-marker--ring {
+  background: transparent;
+  border: 2px solid var(--ib-black);
+  box-shadow: 0 0 0 1px var(--ib-white);
+}
+.ib-marker--ring.ib-marker--rep2 { border-color: var(--ib-orange); }
+
+/* Leaflet popup overrides — full Interbois treatment */
+.leaflet-popup-content-wrapper {
+  border-radius: 0;
+  border: var(--bw-hair) solid var(--ib-black);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  background: var(--ib-white);
+  padding: 0;
+}
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  width: 260px !important;
+}
+.leaflet-popup-tip-container { display: none; }
+.leaflet-popup-close-button {
+  color: var(--fg2) !important;
+  top: 6px !important;
+  right: 6px !important;
+  font-size: 18px !important;
+}
+.leaflet-popup-close-button:hover { color: var(--ib-orange) !important; }
+
+.pop {
+  display: flex;
+  flex-direction: column;
+}
+.pop-head {
+  padding: 14px 16px 12px;
+  border-bottom: var(--bw-hair) solid var(--border-subtle);
+}
+.pop-head .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg2);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pop-head .eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rep-color, var(--ib-black));
+}
+.pop-head h4 {
+  font-size: 15px;
+  font-weight: var(--fw-bold);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+  color: var(--ib-black);
+}
+.pop-head .city {
+  font-size: 12px;
+  color: var(--fg2);
+}
+.pop-body {
+  padding: 10px 16px;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+.pop-body .k { color: var(--fg2); }
+.pop-body .v {
+  font-weight: var(--fw-semibold);
+  color: var(--fg1);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pop-foot {
+  padding: 10px 16px 14px;
+  border-top: var(--bw-hair) solid var(--border-subtle);
+}
+.pop-foot button {
+  width: 100%;
+  background: var(--ib-black);
+  color: var(--ib-white);
+  border: 0;
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.pop-foot button:hover { background: var(--ib-orange); }
+.pop-foot button .arrow { font-family: var(--font-mono); }
+
+/* Polyline drawn route — animated */
+@keyframes route-dash {
+  to { stroke-dashoffset: -24; }
+}
+.ib-route {
+  animation: route-dash 1s linear infinite;
+}
+
+/* Map attribution — keep but style minimally */
+.leaflet-control-attribution {
+  background: rgba(255,255,255,0.85) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 10px !important;
+  color: var(--fg2) !important;
+  padding: 2px 8px !important;
+  border-radius: 0 !important;
+}
+.leaflet-control-attribution a { color: var(--fg1) !important; }
+
+/* Map bottom-left footer: brand mark + coords cursor */
+.map-foot {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 500;
+  background: var(--ib-black);
+  color: var(--ib-white);
+  padding: 10px 14px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.map-foot .demi {
+  width: 10px;
+  height: 5px;
+  background: var(--ib-orange);
+  border-radius: 999px 999px 0 0;
+}
+.map-foot .sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255,255,255,0.2);
+}
+
+/* ------ Tweaks panel overrides (works with starter) ----------------- */
+.tweaks-panel {
+  font-family: var(--font-sans) !important;
+}
