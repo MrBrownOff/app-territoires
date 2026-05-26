@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Territoriale - Représentants de Ventes</title>
+    
+    <!-- Leaflet (sans Leaflet-Draw qui pose des problèmes CORS) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Gestion Territoriale - Représentants de Ventes</h1>
+            <p>Gérez les zones de travail et visualisez les clients</p>
+        </header>
+
+        <main>
+            <div class="map-container">
+                <div id="map"></div>
+                
+                <div class="sidebar">
+                    <div class="panel">
+                        <h3>Représentants</h3>
+                        <div class="rep-selector">
+                            <button class="rep-btn active" data-rep="1" style="border-color: #0066cc;">Rep 1</button>
+                            <button class="rep-btn" data-rep="2" style="border-color: #cc0000;">Rep 2</button>
+                            <button class="rep-btn" data-rep="3" style="border-color: #00cc00;">Rep 3</button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Outils</h3>
+                        <button id="draw-polygon" class="btn-primary">✏️ Dessiner Zone</button>
+                        <button id="clear-zones" class="btn-secondary">🗑️ Effacer Zones</button>
+                        <button id="export-zones" class="btn-secondary">💾 Exporter</button>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Affichage</h3>
+                        <label>
+                            <input type="checkbox" id="show-clients" checked> Magasins Canac
+                        </label>
+                        <label>
+                            <input type="checkbox" id="show-zones" checked> Zones
+                        </label>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Itinéraires</h3>
+                        <p class="small-text">Cliquez sur un client pour voir l'itinéraire depuis le domicile du représentant</p>
+                        <div id="route-info" class="route-info"></div>
+                    </div>
+
+                    <div class="legend">
+                        <h4>Légende</h4>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #0066cc;"></span> Magasins Canac
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #ff0000;"></span> Zone Rep 1
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #00cc00;"></span> Zone Rep 2
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #0066ff;"></span> Zone Rep 3
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
