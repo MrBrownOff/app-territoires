@@ -245,9 +245,10 @@ app.post('/api/route', async (req, res) => {
           duration: Math.round(duration),
           polyline
         };
+        console.log('✓ Valhalla succeeded');
       }
     } catch (err) {
-      // silently fail
+      console.log('✗ Valhalla failed:', err.response?.status || err.message);
     }
 
     // Try 2: GraphHopper free API
@@ -265,9 +266,57 @@ app.post('/api/route', async (req, res) => {
             duration: Math.round(duration),
             polyline
           };
+          console.log('✓ GraphHopper succeeded');
         }
       } catch (err) {
-        // silently fail
+        console.log('✗ GraphHopper failed:', err.response?.status || err.message);
+      }
+    }
+
+    // Try 3: OpenRouteService free tier
+    if (!routeData) {
+      try {
+        const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248&start=${from.lng},${from.lat}&end=${to.lng},${to.lat}`;
+        const response = await axios.get(orsUrl, { timeout: 5000 });
+        if (response.data && response.data.features && response.data.features[0]) {
+          const feature = response.data.features[0];
+          const distance = feature.properties.segments[0].distance / 1000;
+          const duration = feature.properties.segments[0].duration / 60;
+          const coords = feature.geometry.coordinates;
+          const polyline = coords.map(p => ({ lat: p[1], lng: p[0] }));
+          routeData = {
+            distance: Math.round(distance * 10) / 10,
+            duration: Math.round(duration),
+            polyline
+          };
+          console.log('✓ OpenRouteService succeeded');
+        }
+      } catch (err) {
+        console.log('✗ OpenRouteService failed:', err.response?.status || err.message);
+      }
+    }
+
+    // Try 4: MapQuest Open API
+    if (!routeData) {
+      try {
+        const mqUrl = `https://open.mapquestapi.com/directions/v2/route?key=k8V4RBcvYqEYmOPZvZQAjqWBHBG8dMKR&from=${from.lat},${from.lng}&to=${to.lat},${to.lng}&outFormat=json`;
+        const response = await axios.get(mqUrl, { timeout: 5000 });
+        if (response.data && response.data.route) {
+          const route = response.data.route;
+          const distance = route.distance * 1.60934; // convert miles to km
+          const duration = route.time / 60000; // convert ms to minutes
+          const polyline = route.shape?.shapePoints?.map((lat, i, arr) =>
+            i % 2 === 0 ? { lat, lng: arr[i + 1] } : null
+          ).filter(p => p) || [];
+          routeData = {
+            distance: Math.round(distance * 10) / 10,
+            duration: Math.round(duration),
+            polyline: polyline.length > 0 ? polyline : undefined
+          };
+          console.log('✓ MapQuest succeeded');
+        }
+      } catch (err) {
+        console.log('✗ MapQuest failed:', err.response?.status || err.message);
       }
     }
 
