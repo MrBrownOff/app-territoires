@@ -118,31 +118,59 @@ app.delete('/api/zones/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// POST - Calculer itinéraire Woosmap
+// Calcul distance Haversine (fallback)
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// POST - Calculer itinéraire
 app.post('/api/route', async (req, res) => {
   try {
     const { origin, destination } = req.body;
 
-    const response = await axios.get('https://routing-api.woosmap.com/route', {
-      params: {
-        origin: `${origin.lat},${origin.lon}`,
-        destination: `${destination.lat},${destination.lon}`,
-        key: process.env.WOOSMAP_API_KEY
-      }
-    });
+    // Essayer Woosmap API si clé disponible
+    if (process.env.WOOSMAP_API_KEY && process.env.WOOSMAP_API_KEY !== 'dummy-woosmap-key') {
+      try {
+        const response = await axios.get('https://routing-api.woosmap.com/route', {
+          params: {
+            origin: `${origin.lat},${origin.lon}`,
+            destination: `${destination.lat},${destination.lon}`,
+            key: process.env.WOOSMAP_API_KEY
+          },
+          timeout: 5000
+        });
 
-    const route = response.data.routes?.[0];
-    if (!route) {
-      return res.status(400).json({ error: 'Pas de route trouvée' });
+        const route = response.data.routes?.[0];
+        if (route) {
+          const distance = route.distance?.value || 0;
+          const duration = route.duration?.value || 0;
+          return res.json({
+            distance: (distance / 1000).toFixed(1),
+            duration: Math.ceil(duration / 60),
+            polyline: route.polyline?.points || []
+          });
+        }
+      } catch (woosError) {
+        console.warn('Woosmap indisponible, utilisation fallback:', woosError.message);
+      }
     }
 
-    const distance = route.distance?.value || 0;
-    const duration = route.duration?.value || 0;
+    // Fallback: Haversine + estimation temps (60 km/h moyenne)
+    const distanceKm = haversineDistance(origin.lat, origin.lon, destination.lat, destination.lon);
+    const durationMinutes = Math.ceil((distanceKm / 60) * 60);
 
     res.json({
-      distance: (distance / 1000).toFixed(1),
-      duration: Math.ceil(duration / 60),
-      polyline: route.polyline?.points || []
+      distance: distanceKm.toFixed(1),
+      duration: durationMinutes,
+      polyline: [],
+      fallback: true
     });
   } catch (error) {
     console.error('Erreur itinéraire:', error);
