@@ -23,7 +23,8 @@ function repById(id) { return REPS.find(r => r.id === id); }
 // Fetch real routing from OSRM (Open Source Routing Machine)
 async function buildPath(from, to) {
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?geometries=geojson`;
+    // Use OSRM driving profile with explicit ferry exclusion for reliable road-only routing
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?geometries=geojson&exclude=ferry`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('OSRM request failed');
     const data = await response.json();
