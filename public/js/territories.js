@@ -7,7 +7,7 @@ const TERRITORIES_STORAGE_KEY = 'interbois_territories';
 
 // Magasins assignés à Zone A (Rep 1 - Cookshire) par distance
 // Chaque magasin va au Rep le plus proche
-const ZONE_A_STORES = [14, 20, 55, 59, 60, 61, 63, 64, 66, 68, 69, 70, 73, 74, 75, 76, 77, 79, 230, 231];
+const ZONE_A_STORES = [14, 20, 55, 57, 59, 60, 61, 63, 64, 66, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 79, 230, 231];
 
 // Rep locations for distance calculation
 const REP_LOCATIONS = {

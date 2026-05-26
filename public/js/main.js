@@ -16,11 +16,6 @@ const BASEMAPS = {
     attribution: '© OpenStreetMap, © CartoDB',
     maxZoom: 19,
     id: 'positron'
-  }),
-  streets: L.tileLayer('https://{s}.basemaps.cartocdn.com/full_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap, © CartoDB',
-    maxZoom: 19,
-    id: 'streets'
   })
 };
 
@@ -76,8 +71,7 @@ let uniqueCities = new Set();
 const REP_LOCATIONS_KEY = 'interbois_rep_locations';
 let repLocations = {
   1: { lat: 45.467, lon: -72.057, address: 'Cookshire' },
-  2: { lat: 46.8139, lon: -71.2080, address: 'Quebec' },
-  3: { lat: 48.3894, lon: -71.2036, address: 'Chicoutimi' }
+  2: { lat: 46.8139, lon: -71.2080, address: 'Quebec' }
 };
 
 // Zone editing
@@ -639,47 +633,12 @@ document.getElementById('init-territories').addEventListener('click', () => {
   alert('✅ Territoires initialisés avec succès!');
 });
 
-document.getElementById('draw-polygon').addEventListener('click', toggleDrawing);
-
-document.getElementById('clear-zones').addEventListener('click', () => {
-  if (confirm('Supprimer toutes les zones?')) {
-    Object.keys(zones).forEach(zoneId => deleteZone(zoneId));
-    zones = {};
-    drawnPolygons.forEach(poly => map.removeLayer(poly));
-    drawnPolygons = [];
-  }
-});
-
-document.getElementById('export-zones').addEventListener('click', () => {
-  const data = {
-    zones,
-    timestamp: new Date().toISOString()
-  };
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'zones-export.json';
-  a.click();
-});
-
 document.getElementById('show-clients').addEventListener('change', (e) => {
   layers.canac.forEach(marker => {
     if (e.target.checked) {
       map.addLayer(marker);
     } else {
       map.removeLayer(marker);
-    }
-  });
-});
-
-document.getElementById('show-zones').addEventListener('change', (e) => {
-  layers.zones.forEach(polygon => {
-    if (e.target.checked) {
-      map.addLayer(polygon);
-    } else {
-      map.removeLayer(polygon);
     }
   });
 });

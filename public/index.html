@@ -56,9 +56,6 @@
                             <button class="rep-btn" data-rep="2" style="--rep-color: #c85a3a;">
                                 <i class="fas fa-user"></i> Rep 2
                             </button>
-                            <button class="rep-btn" data-rep="3" style="--rep-color: #6b4c89;">
-                                <i class="fas fa-user"></i> Rep 3
-                            </button>
                         </div>
                     </div>
 
@@ -104,19 +101,6 @@
                         <div id="territories-stats" class="territories-stats"></div>
                     </div>
 
-                    <!-- Tools Panel -->
-                    <div class="panel tools-panel">
-                        <h3><i class="fas fa-tools"></i> Outils</h3>
-                        <button id="draw-polygon" class="btn-primary">
-                            <i class="fas fa-pen-nib"></i> Dessiner Zone
-                        </button>
-                        <button id="clear-zones" class="btn-secondary">
-                            <i class="fas fa-trash"></i> Effacer Zones
-                        </button>
-                        <button id="export-zones" class="btn-secondary">
-                            <i class="fas fa-download"></i> Exporter
-                        </button>
-                    </div>
 
                     <!-- Map Layers Panel -->
                     <div class="panel display-panel">
@@ -126,25 +110,9 @@
                                 <input type="checkbox" id="show-clients" checked>
                                 <span>Magasins Canac</span>
                             </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="show-zones" checked>
-                                <span>Zones</span>
-                            </label>
                         </div>
                     </div>
 
-                    <!-- Basemap Selector -->
-                    <div class="panel basemap-panel">
-                        <h3><i class="fas fa-map"></i> Fond de carte</h3>
-                        <div class="basemap-selector">
-                            <button class="basemap-btn active" data-basemap="positron" title="Positron (Recommandé)">
-                                <i class="fas fa-square-full"></i> Clair
-                            </button>
-                            <button class="basemap-btn" data-basemap="streets" title="Streets">
-                                <i class="fas fa-square-full"></i> Détaillé
-                            </button>
-                        </div>
-                    </div>
 
                     <!-- Routes Panel -->
                     <div class="panel routes-panel">
@@ -159,23 +127,12 @@
                         <div class="legend-section">
                             <p class="legend-title"><i class="fas fa-store"></i> <strong>Magasins</strong></p>
                             <div class="legend-item">
-                                <span class="legend-color" style="background: #0066cc; border-radius: 50%; width: 12px; height: 12px;"></span>
-                                <span>Points de vente Canac</span>
-                            </div>
-                        </div>
-                        <div class="legend-section" style="margin-top: 10px;">
-                            <p class="legend-title"><i class="fas fa-draw-polygon"></i> <strong>Zones territoriales</strong></p>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background: #2c5f2d;"></span>
-                                <span>Zone Rep 1 (Vert)</span>
+                                <span class="legend-color" style="background: #2c5f2d; border-radius: 50%; width: 12px; height: 12px;"></span>
+                                <span>Rep 1 - Cookshire</span>
                             </div>
                             <div class="legend-item">
-                                <span class="legend-color" style="background: #c85a3a;"></span>
-                                <span>Zone Rep 2 (Orange)</span>
-                            </div>
-                            <div class="legend-item">
-                                <span class="legend-color" style="background: #6b4c89;"></span>
-                                <span>Zone Rep 3 (Violet)</span>
+                                <span class="legend-color" style="background: #c85a3a; border-radius: 50%; width: 12px; height: 12px;"></span>
+                                <span>Rep 2 - Québec</span>
                             </div>
                         </div>
                     </div>
