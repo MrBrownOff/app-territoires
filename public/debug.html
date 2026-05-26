@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug</title>
+</head>
+<body style="font-family: monospace; padding: 20px;">
+  <h1>Diagnostic</h1>
+  <div id="debug"></div>
+
+  <script src="js/data.js"></script>
+  <script>
+    const debug = document.getElementById('debug');
+    const lines = [];
+
+    lines.push('✓ data.js loaded');
+    lines.push('window.IB_DATA exists: ' + (typeof window.IB_DATA !== 'undefined'));
+
+    if (window.IB_DATA) {
+      lines.push('Reps: ' + window.IB_DATA.reps.length);
+      lines.push('Stores: ' + window.IB_DATA.stores.length);
+      lines.push('First rep: ' + JSON.stringify(window.IB_DATA.reps[0], null, 2));
+      lines.push('First store: ' + JSON.stringify(window.IB_DATA.stores[0], null, 2));
+    } else {
+      lines.push('ERROR: window.IB_DATA is undefined!');
+    }
+
+    debug.innerHTML = '<pre>' + lines.join('\n') + '</pre>';
+  </script>
+</body>
+</html>

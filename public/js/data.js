@@ -69,15 +69,31 @@ window.IB_DATA = {
 
 // Aggregate stats per rep
 (function(){
+  function haversineDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.asin(Math.sqrt(a));
+    return R * c;
+  }
+
   window.IB_DATA.reps.forEach(rep => {
     const stores = window.IB_DATA.stores.filter(s => s.rep === rep.id);
     const total = stores.reduce((acc, s) => acc + s.visits, 0);
+    const totalDist = stores.reduce((acc, s) => {
+      const d = haversineDistance(rep.home.lat, rep.home.lng, s.lat, s.lng);
+      return acc + d * 2 * s.visits;
+    }, 0);
     rep.stats = {
       magasins: stores.length,
       visMensuelles: stores.filter(s => s.freq === 'mensuel').length,
       vis68: stores.filter(s => s.freq === '6-8 sem').length,
       totalAn: total,
-      moyMois: +(total / 12).toFixed(1)
+      moyMois: +(total / 12).toFixed(1),
+      distanceTot: totalDist
     };
   });
 })();
