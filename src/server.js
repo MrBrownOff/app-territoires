@@ -230,6 +230,49 @@ app.post('/api/route', async (req, res) => {
     // Try multiple routing services
     let routeData = null;
 
+    // Try 0: Woosmap (priority - real routing with true distances/times)
+    if (process.env.WOOSMAP_API_KEY) {
+      try {
+        const woosUrl = `https://routing-api.woosmap.com/route?origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}&key=${process.env.WOOSMAP_API_KEY}`;
+        const response = await axios.get(woosUrl, { timeout: 5000 });
+        if (response.data && response.data.routes && response.data.routes[0]) {
+          const route = response.data.routes[0];
+          const distance = route.distance.value / 1000; // convert m to km
+          const duration = route.duration.value / 60; // convert s to minutes
+
+          // Build polyline from route overview_polyline or interpolate
+          let polyline = null;
+          if (route.overview_polyline?.points) {
+            polyline = decodePolyline(route.overview_polyline.points)
+              .map(p => ({ lat: p[0], lng: p[1] }));
+          } else if (route.legs && route.legs[0]?.steps) {
+            // Try to extract from steps
+            polyline = route.legs
+              .flatMap(leg => leg.steps)
+              .map(step => ({
+                lat: step.start_location?.lat,
+                lng: step.start_location?.lng
+              }))
+              .filter(p => p.lat && p.lng);
+          }
+
+          // Fallback to curved approximation if no polyline
+          if (!polyline || polyline.length === 0) {
+            polyline = generateCurvedPolyline(from, to, 15);
+          }
+
+          routeData = {
+            distance: Math.round(distance * 10) / 10,
+            duration: Math.round(duration),
+            polyline
+          };
+          console.log('✓ Woosmap succeeded:', distance, 'km,', Math.round(duration), 'min');
+        }
+      } catch (err) {
+        console.log('✗ Woosmap failed:', err.response?.status || err.message);
+      }
+    }
+
     // Try 1: Valhalla (open source alternative)
     try {
       const valhallaUrl = `https://valhalla1.openstreetmap.de/route?json={"costing":"auto","locations":[{"lat":${from.lat},"lon":${from.lng}},{"lat":${to.lat},"lon":${to.lng}}]}&exclude=ferry`;
