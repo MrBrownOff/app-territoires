@@ -129,6 +129,52 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+// Decode polyline (Valhalla format)
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let result = 0, shift = 0;
+    for (let i = 0; i < 32; i++) {
+      const b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+      if (b < 0x20) break;
+    }
+    lat += (result & 1) ? ~(result >> 1) : result >> 1;
+
+    result = 0;
+    shift = 0;
+    for (let i = 0; i < 32; i++) {
+      const b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+      if (b < 0x20) break;
+    }
+    lng += (result & 1) ? ~(result >> 1) : result >> 1;
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
+
+// Generate curved polyline for visual representation when real routing unavailable
+function generateCurvedPolyline(from, to, segments = 15) {
+  const polyline = [{ lat: from.lat, lng: from.lng }];
+  const midLat = (from.lat + to.lat) / 2;
+  const midLng = (from.lng + to.lng) / 2;
+  const offsetLng = (to.lng - from.lng) * 0.1; // slight perpendicular offset
+
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    // Bezier curve with control point offset
+    const lat = from.lat + (to.lat - from.lat) * t;
+    const lng = from.lng + (to.lng - from.lng) * t + offsetLng * Math.sin(Math.PI * t);
+    polyline.push({ lat, lng });
+  }
+  polyline.push({ lat: to.lat, lng: to.lng });
+  return polyline;
+}
+
 // POST - Calculer itinéraire
 // POST - Sauvegarder domicile rep
 app.post('/api/rep-location', async (req, res) => {
@@ -189,9 +235,16 @@ app.post('/api/route', async (req, res) => {
       const valhallaUrl = `https://valhalla1.openstreetmap.de/route?json={"costing":"auto","locations":[{"lat":${from.lat},"lon":${from.lng}},{"lat":${to.lat},"lon":${to.lng}}]}&exclude=ferry`;
       const response = await axios.get(valhallaUrl, { timeout: 5000 });
       if (response.data && response.data.trip && response.data.trip.legs) {
-        const distance = response.data.trip.summary.length / 1000; // convert to km
-        const duration = response.data.trip.summary.time / 60; // convert to minutes
-        routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
+        const distance = response.data.trip.summary.length / 1000;
+        const duration = response.data.trip.summary.time / 60;
+        const polyline = response.data.trip.legs
+          .flatMap(leg => leg.shape ? decodePolyline(leg.shape) : [])
+          .map(p => ({ lat: p[0], lng: p[1] }));
+        routeData = {
+          distance: Math.round(distance * 10) / 10,
+          duration: Math.round(duration),
+          polyline
+        };
       }
     } catch (err) {
       // silently fail
@@ -204,18 +257,23 @@ app.post('/api/route', async (req, res) => {
         const response = await axios.get(ghUrl, { timeout: 5000 });
         if (response.data && response.data.routes && response.data.routes[0]) {
           const route = response.data.routes[0];
-          const distance = route.distance / 1000; // convert to km
-          const duration = route.time / 60000; // convert to minutes
-          routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
+          const distance = route.distance / 1000;
+          const duration = route.time / 60000;
+          const polyline = route.points?.coordinates?.map(p => ({ lat: p[1], lng: p[0] })) || [];
+          routeData = {
+            distance: Math.round(distance * 10) / 10,
+            duration: Math.round(duration),
+            polyline
+          };
         }
       } catch (err) {
         // silently fail
       }
     }
 
-    // Fallback: Improved Haversine with road factor optimized for Quebec (1.5-1.6x)
+    // Fallback: Improved Haversine with road factor optimized for Quebec (1.85x)
     if (!routeData) {
-      const R = 6371; // Earth radius in km
+      const R = 6371;
       const dLat = (to.lat - from.lat) * Math.PI / 180;
       const dLng = (to.lng - from.lng) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -223,13 +281,17 @@ app.post('/api/route', async (req, res) => {
                 Math.sin(dLng/2) * Math.sin(dLng/2);
       const c = 2 * Math.asin(Math.sqrt(a));
       const straightDist = R * c;
-      // Quebec roads average 1.85x longer than straight line (accounts for network topology and obstacles)
       const roadDistance = straightDist * 1.85;
-      const avgSpeed = 85; // km/h average for Quebec highways/roads
-      const duration = (roadDistance / avgSpeed) * 60; // minutes
+      const avgSpeed = 85;
+      const duration = (roadDistance / avgSpeed) * 60;
+
+      // Generate curved polyline for Haversine fallback
+      const polyline = generateCurvedPolyline(from, to, 15);
+
       routeData = {
         distance: Math.round(roadDistance * 10) / 10,
         duration: Math.round(duration),
+        polyline,
         approximated: true
       };
     }

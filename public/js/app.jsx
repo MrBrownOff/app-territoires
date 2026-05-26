@@ -32,8 +32,10 @@ async function buildPath(from, to) {
     if (!response.ok) throw new Error('Route API failed');
     const routeInfo = await response.json();
 
-    // Generate path points: simple line for now (server API handles distance/duration)
-    const pts = [[from.lat, from.lng], [to.lat, to.lng]];
+    // Use polyline from server if available, otherwise fallback to straight line
+    const pts = routeInfo.polyline && routeInfo.polyline.length > 0
+      ? routeInfo.polyline.map(p => [p.lat, p.lng])
+      : [[from.lat, from.lng], [to.lat, to.lng]];
 
     return {
       pts,
