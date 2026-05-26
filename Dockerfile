@@ -12,10 +12,9 @@ RUN npm install --production
 COPY . .
 
 # Port HuggingFace Spaces
-EXPOSE 7860
+EXPOSE 3000
 
 # Variables d'environnement par défaut
-ENV PORT=7860
 ENV NODE_ENV=production
 
 # Démarrer l'application
