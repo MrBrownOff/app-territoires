@@ -23,20 +23,22 @@ function repById(id) { return REPS.find(r => r.id === id); }
 // Fetch real routing from OSRM (Open Source Routing Machine)
 async function buildPath(from, to) {
   try {
-    // Use OSRM driving profile with explicit ferry exclusion for reliable road-only routing
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?geometries=geojson&exclude=ferry`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('OSRM request failed');
-    const data = await response.json();
-    if (!data.routes || !data.routes[0]) throw new Error('No route found');
-    const route = data.routes[0];
-    const coords = route.geometry.coordinates;
-    const distanceKm = Math.round(route.distance / 1000 * 10) / 10;
-    const durationMin = Math.round(route.duration / 60);
+    // Call local server API for route calculation (supports multiple backends)
+    const response = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to })
+    });
+    if (!response.ok) throw new Error('Route API failed');
+    const routeInfo = await response.json();
+
+    // Generate path points: simple line for now (server API handles distance/duration)
+    const pts = [[from.lat, from.lng], [to.lat, to.lng]];
+
     return {
-      pts: coords.map(([lng, lat]) => [lat, lng]),
-      distance: distanceKm,
-      duration: durationMin
+      pts,
+      distance: routeInfo.distance,
+      duration: routeInfo.duration
     };
   } catch (err) {
     console.warn('Routing failed, using straight line fallback:', err);

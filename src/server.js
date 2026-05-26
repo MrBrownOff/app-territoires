@@ -220,6 +220,74 @@ app.get('/api/rep-locations', async (req, res) => {
   }
 });
 
+// Calculate real route distance using accessible API or approximation
+app.post('/api/route', async (req, res) => {
+  try {
+    const { from, to } = req.body;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'from et to requis' });
+    }
+
+    // Try multiple routing services
+    let routeData = null;
+
+    // Try 1: Valhalla (open source alternative)
+    try {
+      const valhallaUrl = `https://valhalla1.openstreetmap.de/route?json={"costing":"auto","locations":[{"lat":${from.lat},"lon":${from.lng}},{"lat":${to.lat},"lon":${to.lng}}]}&exclude=ferry`;
+      const response = await axios.get(valhallaUrl, { timeout: 5000 });
+      if (response.data && response.data.trip && response.data.trip.legs) {
+        const distance = response.data.trip.summary.length / 1000; // convert to km
+        const duration = response.data.trip.summary.time / 60; // convert to minutes
+        routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
+      }
+    } catch (err) {
+      console.log('Valhalla failed:', err.message);
+    }
+
+    // Try 2: GraphHopper free API
+    if (!routeData) {
+      try {
+        const ghUrl = `https://graphhopper.com/api/1/route?point=${from.lat},${from.lng}&point=${to.lat},${to.lng}&profile=car&locale=en&points_encoded=false`;
+        const response = await axios.get(ghUrl, { timeout: 5000 });
+        if (response.data && response.data.routes && response.data.routes[0]) {
+          const route = response.data.routes[0];
+          const distance = route.distance / 1000; // convert to km
+          const duration = route.time / 60000; // convert to minutes
+          routeData = { distance: Math.round(distance * 10) / 10, duration: Math.round(duration) };
+        }
+      } catch (err) {
+        console.log('GraphHopper failed:', err.message);
+      }
+    }
+
+    // Fallback: Haversine + road factor approximation (1.4x for road vs straight line)
+    if (!routeData) {
+      const R = 6371; // Earth radius in km
+      const dLat = (to.lat - from.lat) * Math.PI / 180;
+      const dLng = (to.lng - from.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.asin(Math.sqrt(a));
+      const straightDist = R * c;
+      // Approximate road distance (roads are ~1.4x longer than straight line on average)
+      const roadDistance = straightDist * 1.4;
+      const avgSpeed = 70; // km/h average
+      const duration = (roadDistance / avgSpeed) * 60; // minutes
+      routeData = {
+        distance: Math.round(roadDistance * 10) / 10,
+        duration: Math.round(duration),
+        approximated: true
+      };
+    }
+
+    res.json(routeData);
+  } catch (error) {
+    console.error('Route calculation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
