@@ -28,11 +28,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Supabase
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+// Supabase (optionnel)
+let supabase = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY &&
+    process.env.SUPABASE_URL !== 'https://dummy.supabase.co' &&
+    process.env.SUPABASE_KEY !== 'dummy-key') {
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+  );
+  console.log('✅ Supabase initialisé');
+} else {
+  console.log('⚠️ Supabase désactivé (clés dummy détectées)');
+}
 
 // ===== ROUTES =====
 
@@ -182,6 +190,12 @@ app.post('/api/route', async (req, res) => {
 app.post('/api/rep-location', async (req, res) => {
   try {
     const { rep, lat, lon } = req.body;
+
+    if (!supabase) {
+      console.log('ℹ️ Rep location sauvegardée en localStorage (Supabase indisponible)');
+      res.json({ success: true, message: 'Sauvegardée en localStorage' });
+      return;
+    }
 
     const { data, error } = await supabase
       .from('rep_locations')
