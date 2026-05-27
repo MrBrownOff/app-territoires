@@ -417,7 +417,10 @@ app.get('/api/test-routing', async (req, res) => {
       hasRoutes: !!r.data.routes,
       routesCount: r.data.routes?.length || 0,
       responseKeys: Object.keys(r.data),
-      firstRoute: r.data.routes?.[0] ? Object.keys(r.data.routes[0]) : null
+      woosStatus: r.data.status,
+      woosError: r.data.error_message,
+      firstRoute: r.data.routes?.[0] ? Object.keys(r.data.routes[0]) : null,
+      rows: r.data.rows ? Object.keys(r.data.rows[0] || {}) : null
     };
   } catch (e) {
     results.woosmap = { status: 'error', error: e.message, code: e.code };
