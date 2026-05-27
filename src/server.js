@@ -426,14 +426,20 @@ app.get('/api/test-routing', async (req, res) => {
     results.woosmap = { status: 'error', error: e.message, code: e.code };
   }
 
-  // Test Valhalla
+  // Test Valhalla (POST instead of GET with query param)
   try {
-    const url = `https://valhalla1.openstreetmap.de/route?json={"costing":"auto","locations":[{"lat":${testCoords.from.lat},"lon":${testCoords.from.lng}},{"lat":${testCoords.to.lat},"lon":${testCoords.to.lng}}]}`;
-    console.log('Testing Valhalla:', url);
-    const r = await axios.get(url, { timeout: 3000 });
-    results.valhalla = { status: 'ok', hasTrip: !!r.data.trip };
+    const payload = {
+      costing: 'auto',
+      locations: [
+        { lat: testCoords.from.lat, lon: testCoords.from.lng },
+        { lat: testCoords.to.lat, lon: testCoords.to.lng }
+      ]
+    };
+    console.log('Testing Valhalla with POST:', JSON.stringify(payload));
+    const r = await axios.post('https://valhalla1.openstreetmap.de/route', payload, { timeout: 3000 });
+    results.valhalla = { status: 'ok', hasTrip: !!r.data.trip, tripKeys: r.data.trip ? Object.keys(r.data.trip) : null };
   } catch (e) {
-    results.valhalla = { status: 'error', error: e.message, code: e.code, statusCode: e.response?.status };
+    results.valhalla = { status: 'error', error: e.message, code: e.code, statusCode: e.response?.status, responseData: e.response?.data };
   }
 
   // Test GraphHopper
