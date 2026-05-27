@@ -230,7 +230,29 @@ app.post('/api/route', async (req, res) => {
     // Try multiple routing services
     let routeData = null;
 
-    // Try 0: Woosmap (priority - real routing with true distances/times)
+    // Try 0: OSRM public (completely free, no auth needed)
+    if (!routeData) {
+      try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+        const response = await axios.get(osrmUrl, { timeout: 5000 });
+        if (response.data && response.data.routes && response.data.routes[0]) {
+          const route = response.data.routes[0];
+          const distance = route.distance / 1000; // convert m to km
+          const duration = route.duration / 60; // convert s to minutes
+          const polyline = route.geometry?.coordinates?.map(p => ({ lat: p[1], lng: p[0] })) || [];
+          routeData = {
+            distance: Math.round(distance * 10) / 10,
+            duration: Math.round(duration),
+            polyline: polyline.length > 0 ? polyline : generateCurvedPolyline(from, to, 15)
+          };
+          console.log('✓ OSRM succeeded:', distance.toFixed(1), 'km,', Math.round(duration), 'min');
+        }
+      } catch (err) {
+        console.log('✗ OSRM failed:', err.response?.status || err.message);
+      }
+    }
+
+    // Try 1: Woosmap (priority - real routing with true distances/times)
     if (process.env.WOOSMAP_API_KEY) {
       try {
         const woosUrl = `https://api.woosmap.com/distance/route/json?origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}&key=${process.env.WOOSMAP_API_KEY}`;
@@ -405,6 +427,21 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test-routing', async (req, res) => {
   const results = {};
   const testCoords = { from: { lat: 45.467, lng: -72.057 }, to: { lat: 45.39547925, lng: -71.86639838 } };
+
+  // Test OSRM public
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${testCoords.from.lng},${testCoords.from.lat};${testCoords.to.lng},${testCoords.to.lat}?overview=full&geometries=geojson`;
+    console.log('Testing OSRM:', url);
+    const r = await axios.get(url, { timeout: 3000 });
+    results.osrm = {
+      status: 'ok',
+      hasRoutes: !!r.data.routes,
+      routesCount: r.data.routes?.length || 0,
+      hasGeometry: !!r.data.routes?.[0]?.geometry
+    };
+  } catch (e) {
+    results.osrm = { status: 'error', error: e.message, code: e.code };
+  }
 
   // Test Woosmap
   try {
