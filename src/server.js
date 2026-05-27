@@ -233,7 +233,27 @@ app.post('/api/route', async (req, res) => {
     // Try 0: OSRM public (completely free, no auth needed)
     if (!routeData) {
       try {
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+        // Special case: Force Pont Pierre-Laporte for Quebec ↔ Levis route
+        // Quebec (46.8139, -71.2080) ↔ Levis (46.789816, -71.156564)
+        const pontPierre = { lat: 46.806, lng: -71.193 }; // Pont Pierre-Laporte coordinates
+        const quebec = { lat: 46.8139, lng: -71.2080 };
+        const levis = { lat: 46.789816, lng: -71.156564 };
+
+        const isQuebecLevisRoute =
+          (Math.abs(from.lat - quebec.lat) < 0.01 && Math.abs(from.lng - quebec.lng) < 0.01 &&
+           Math.abs(to.lat - levis.lat) < 0.01 && Math.abs(to.lng - levis.lng) < 0.01) ||
+          (Math.abs(from.lat - levis.lat) < 0.01 && Math.abs(from.lng - levis.lng) < 0.01 &&
+           Math.abs(to.lat - quebec.lat) < 0.01 && Math.abs(to.lng - quebec.lng) < 0.01);
+
+        let osrmUrl;
+        if (isQuebecLevisRoute) {
+          // Force route through Pont Pierre-Laporte
+          osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${pontPierre.lng},${pontPierre.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+          console.log('🌉 Quebec-Levis: Forcing route through Pont Pierre-Laporte');
+        } else {
+          osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+        }
+
         const response = await axios.get(osrmUrl, { timeout: 5000 });
         if (response.data && response.data.routes && response.data.routes[0]) {
           const route = response.data.routes[0];
