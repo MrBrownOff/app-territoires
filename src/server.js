@@ -411,7 +411,14 @@ app.get('/api/test-routing', async (req, res) => {
     const url = `https://api.woosmap.com/distance/route/json?origin=${testCoords.from.lat},${testCoords.from.lng}&destination=${testCoords.to.lat},${testCoords.to.lng}&key=${process.env.WOOSMAP_API_KEY}`;
     console.log('Testing Woosmap:', url);
     const r = await axios.get(url, { timeout: 3000 });
-    results.woosmap = { status: 'ok', hasRoutes: !!r.data.routes };
+    console.log('Woosmap response:', JSON.stringify(r.data, null, 2));
+    results.woosmap = {
+      status: 'ok',
+      hasRoutes: !!r.data.routes,
+      routesCount: r.data.routes?.length || 0,
+      responseKeys: Object.keys(r.data),
+      firstRoute: r.data.routes?.[0] ? Object.keys(r.data.routes[0]) : null
+    };
   } catch (e) {
     results.woosmap = { status: 'error', error: e.message, code: e.code };
   }
