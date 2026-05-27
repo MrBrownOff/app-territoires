@@ -239,19 +239,24 @@ app.post('/api/route', async (req, res) => {
         const quebec = { lat: 46.8139, lng: -71.2080 };
         const levis = { lat: 46.789816, lng: -71.156564 };
 
+        const tolerance = 0.02; // ~2km tolerance for coordinate matching
         const isQuebecLevisRoute =
-          (Math.abs(from.lat - quebec.lat) < 0.01 && Math.abs(from.lng - quebec.lng) < 0.01 &&
-           Math.abs(to.lat - levis.lat) < 0.01 && Math.abs(to.lng - levis.lng) < 0.01) ||
-          (Math.abs(from.lat - levis.lat) < 0.01 && Math.abs(from.lng - levis.lng) < 0.01 &&
-           Math.abs(to.lat - quebec.lat) < 0.01 && Math.abs(to.lng - quebec.lng) < 0.01);
+          (Math.abs(from.lat - quebec.lat) < tolerance && Math.abs(from.lng - quebec.lng) < tolerance &&
+           Math.abs(to.lat - levis.lat) < tolerance && Math.abs(to.lng - levis.lng) < tolerance) ||
+          (Math.abs(from.lat - levis.lat) < tolerance && Math.abs(from.lng - levis.lng) < tolerance &&
+           Math.abs(to.lat - quebec.lat) < tolerance && Math.abs(to.lng - quebec.lng) < tolerance);
 
         let osrmUrl;
         if (isQuebecLevisRoute) {
           // Force route through Pont Pierre-Laporte
           osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${pontPierre.lng},${pontPierre.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
-          console.log('🌉 Quebec-Levis: Forcing route through Pont Pierre-Laporte');
+          console.log(`🌉 Quebec-Levis route detected (from: ${from.lat},${from.lng} to: ${to.lat},${to.lng}) - Forcing Pont Pierre-Laporte`);
         } else {
           osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
+          // Debug: log why detection failed (first request only)
+          if (Math.abs(from.lat - quebec.lat) < 0.05 && Math.abs(to.lat - levis.lat) < 0.05) {
+            console.log(`ℹ️ Near Quebec-Levis but not exact match. from: ${from.lat},${from.lng} to: ${to.lat},${to.lng}`);
+          }
         }
 
         const response = await axios.get(osrmUrl, { timeout: 5000 });
