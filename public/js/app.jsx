@@ -298,7 +298,7 @@ function RepCard({ rep, isActive, onClick }) {
         <div className="row"><span className="k">6–8 sem</span><span className="v">{s.vis68}</span></div>
         <div className="row"><span className="k">Total / an</span><span className="v">{s.totalAn}</span></div>
         <div className="row"><span className="k">Moy / mois</span><span className="v">{s.moyMois}</span></div>
-        <div className="row"><span className="k">Distance</span><span className="v">{formatNum(s.distanceTot)}</span></div>
+        <div className="row"><span className="k">Distance</span><span className="v">{formatNum(Math.round(s.distanceTot))} km</span></div>
       </div>
       <div className="rep-foot">
         <span>Domicile</span>
