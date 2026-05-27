@@ -453,6 +453,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`🚀 Serveur démarré sur http://${HOST}:${PORT}`);
+  console.log('📍 Environment: Production' + (process.env.WOOSMAP_API_KEY ? ' (Woosmap enabled)' : ' (Woosmap disabled)'));
 });
 
 module.exports = app;
