@@ -401,6 +401,53 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Test routing services (debug endpoint)
+app.get('/api/test-routing', async (req, res) => {
+  const results = {};
+  const testCoords = { from: { lat: 45.467, lng: -72.057 }, to: { lat: 45.39547925, lng: -71.86639838 } };
+
+  // Test Woosmap
+  try {
+    const url = `https://api.woosmap.com/distance/route/json?origin=${testCoords.from.lat},${testCoords.from.lng}&destination=${testCoords.to.lat},${testCoords.to.lng}&key=${process.env.WOOSMAP_API_KEY}`;
+    console.log('Testing Woosmap:', url);
+    const r = await axios.get(url, { timeout: 3000 });
+    results.woosmap = { status: 'ok', hasRoutes: !!r.data.routes };
+  } catch (e) {
+    results.woosmap = { status: 'error', error: e.message, code: e.code };
+  }
+
+  // Test Valhalla
+  try {
+    const url = `https://valhalla1.openstreetmap.de/route?json={"costing":"auto","locations":[{"lat":${testCoords.from.lat},"lon":${testCoords.from.lng}},{"lat":${testCoords.to.lat},"lon":${testCoords.to.lng}}]}`;
+    console.log('Testing Valhalla:', url);
+    const r = await axios.get(url, { timeout: 3000 });
+    results.valhalla = { status: 'ok', hasTrip: !!r.data.trip };
+  } catch (e) {
+    results.valhalla = { status: 'error', error: e.message, code: e.code, statusCode: e.response?.status };
+  }
+
+  // Test GraphHopper
+  try {
+    const url = `https://graphhopper.com/api/1/route?point=${testCoords.from.lat},${testCoords.from.lng}&point=${testCoords.to.lat},${testCoords.to.lng}&profile=car`;
+    console.log('Testing GraphHopper:', url);
+    const r = await axios.get(url, { timeout: 3000 });
+    results.graphhopper = { status: 'ok', hasRoutes: !!r.data.routes };
+  } catch (e) {
+    results.graphhopper = { status: 'error', error: e.message, code: e.code, statusCode: e.response?.status };
+  }
+
+  // Test DNS resolution
+  const dns = require('dns').promises;
+  try {
+    const ip = await dns.resolve4('api.woosmap.com');
+    results.dns_woosmap = { status: 'ok', ip };
+  } catch (e) {
+    results.dns_woosmap = { status: 'error', error: e.message };
+  }
+
+  res.json(results);
+});
+
 // Démarrer serveur
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
